@@ -416,15 +416,12 @@ matanyone_processor = InferenceCore(matanyone_model, cfg=matanyone_model.cfg)
 # download test samples
 media_url = "https://github.com/pq-yang/MatAnyone/releases/download/media/"
 test_sample_path = os.path.join('/home/user/app/hugging_face/', "test_sample/")
-load_file_from_url(os.path.join(media_url, 'test-sample0.mp4'), test_sample_path)
-load_file_from_url(os.path.join(media_url, 'test-sample1.mp4'), test_sample_path)
-load_file_from_url(os.path.join(media_url, 'test-sample2.mp4'), test_sample_path)
-load_file_from_url(os.path.join(media_url, 'test-sample3.mp4'), test_sample_path)
-load_file_from_url(os.path.join(media_url, 'test-sample4.mp4'), test_sample_path)
-load_file_from_url(os.path.join(media_url, 'test-sample5.mp4'), test_sample_path)
-load_file_from_url(os.path.join(media_url, 'test-sample6.mp4'), test_sample_path)
-load_file_from_url(os.path.join(media_url, 'test-sample0.png'), test_sample_path)
-load_file_from_url(os.path.join(media_url, 'test-sample1.png'), test_sample_path)
+load_file_from_url(os.path.join(media_url, 'test-sample0-720p.mp4'), test_sample_path)
+load_file_from_url(os.path.join(media_url, 'test-sample1-720p.mp4'), test_sample_path)
+load_file_from_url(os.path.join(media_url, 'test-sample2-720p.mp4'), test_sample_path)
+load_file_from_url(os.path.join(media_url, 'test-sample3-720p.mp4'), test_sample_path)
+load_file_from_url(os.path.join(media_url, 'test-sample0.jpg'), test_sample_path)
+load_file_from_url(os.path.join(media_url, 'test-sample1.jpg'), test_sample_path)
 
 # download assets
 assets_path = os.path.join('/home/user/app/hugging_face/', "assets/")
@@ -761,7 +758,7 @@ with gr.Blocks(theme=gr.themes.Monochrome(), css=my_custom_css) as demo:
             gr.Markdown("---")
             gr.Markdown("## Examples")
             gr.Examples(
-                examples=[os.path.join(os.path.dirname(__file__), "./test_sample/", test_sample) for test_sample in ["test-sample0.mp4", "test-sample1.mp4", "test-sample2.mp4", "test-sample3.mp4", "test-sample4.mp4", "test-sample5.mp4", "test-sample6.mp4"]],
+                examples=[os.path.join(os.path.dirname(__file__), "./test_sample/", test_sample) for test_sample in ["test-sample0-720p.mp4", "test-sample1-720p.mp4", "test-sample2-720p.mp4", "test-sample3-720p.mp4"]],
                 inputs=[video_input],
             )
 
@@ -957,7 +954,7 @@ with gr.Blocks(theme=gr.themes.Monochrome(), css=my_custom_css) as demo:
             gr.Markdown("---")
             gr.Markdown("## Examples")
             gr.Examples(
-                examples=[os.path.join(os.path.dirname(__file__), "./test_sample/", test_sample) for test_sample in ["test-sample0.png", "test-sample1.png"]],
+                examples=[os.path.join(os.path.dirname(__file__), "./test_sample/", test_sample) for test_sample in ["test-sample0.jpg", "test-sample1.jpg"]],
                 inputs=[image_input],
             )
 
