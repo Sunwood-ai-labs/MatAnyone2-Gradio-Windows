@@ -116,9 +116,8 @@ def get_frames_from_video(video_input, video_state):
     user_name = time.time()
 
     # extract Audio
-    audio_path = "audio.wav"
-    audio_path = video_input.replace(".mp4", "_audio.wav")
     try:
+        audio_path = video_input.replace(".mp4", "_audio.wav")
         ffmpeg.input(video_path).output(audio_path, format='wav', acodec='pcm_s16le', ac=2, ar='44100').run(overwrite_output=True, quiet=True)
     except Exception as e:
         print(f"Audio extraction error: {str(e)}")
@@ -259,7 +258,7 @@ def show_mask(video_state, interactive_state, mask_dropdown):
 
 # image matting
 def image_matting(video_state, interactive_state, mask_dropdown, erode_kernel_size, dilate_kernel_size, refine_iter):
-    matanyone_processor.clear_memory()
+    matanyone_processor = InferenceCore(matanyone_model, cfg=matanyone_model.cfg)
     if interactive_state["track_end_number"]:
         following_frames = video_state["origin_images"][video_state["select_frame_number"]:interactive_state["track_end_number"]]
     else:
@@ -287,7 +286,7 @@ def image_matting(video_state, interactive_state, mask_dropdown, erode_kernel_si
 
 # video matting
 def video_matting(video_state, interactive_state, mask_dropdown, erode_kernel_size, dilate_kernel_size):
-    matanyone_processor.clear_memory()
+    matanyone_processor = InferenceCore(matanyone_model, cfg=matanyone_model.cfg)
     if interactive_state["track_end_number"]:
         following_frames = video_state["origin_images"][video_state["select_frame_number"]:interactive_state["track_end_number"]]
     else:
