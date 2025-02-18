@@ -141,6 +141,16 @@ def get_frames_from_video(video_input, video_state):
         print("read_frame_source:{} error. {}\n".format(video_path, str(e)))
     image_size = (frames[0].shape[0],frames[0].shape[1]) 
 
+    # resize if resolution too big
+    if image_size[0]>=1280 and image_size[0]>=1280:
+        scale = 1080 / min(image_size)
+        new_w = int(image_size[1] * scale)
+        new_h = int(image_size[0] * scale)
+        # update frames
+        frames = [cv2.resize(f, (new_w, new_h), interpolation=cv2.INTER_AREA) for f in frames]
+        # update image_size
+        image_size = (frames[0].shape[0],frames[0].shape[1]) 
+
     # initialize video_state
     video_state = {
         "user_name": user_name,
@@ -434,6 +444,8 @@ description = r"""
 <b>Official Gradio demo</b> for <a href='https://github.com/pq-yang/MatAnyone' target='_blank'><b>MatAnyone: Stable Video Matting with Consistent Memory Propagation</b></a>.<br>
 🔥 MatAnyone is a practical human video matting framework supporting target assignment 🎯.<br>
 🎪 Try to drop your video/image, assign the target masks with a few clicks, and get the the matting results 🤡!<br>
+
+*Note: Due to the GPU memory constraints, any input with too big resolution will be resized to 1080p.*
 """
 article = r"""
 <b>If MatAnyone is helpful, please help to 🌟 the <a href='https://github.com/pq-yang/MatAnyone' target='_blank'>Github Repo</a>. Thanks!</b>
