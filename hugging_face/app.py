@@ -474,7 +474,7 @@ If you have any questions, please feel free to reach me out at <b>peiqingyang99@
 <br>
 👏 **Acknowledgement**
 <br>
-The project is developed upon [Cutie](https://github.com/hkchengrex/Cutie), and harnesses the capabilities from [Segment Anything](https://github.com/facebookresearch/segment-anything). Thanks for their awesome works!
+This project is built upon [Cutie](https://github.com/hkchengrex/Cutie), with the interactive demo adapted from [ProPainter](https://huggingface.co/spaces/sczhou/ProPainter), leveraging segmentation capabilities from [Segment Anything](https://github.com/facebookresearch/segment-anything). Thanks for their awesome works!
 """
 
 my_custom_css = """

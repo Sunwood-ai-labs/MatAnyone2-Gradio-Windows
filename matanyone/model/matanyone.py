@@ -40,7 +40,7 @@ class MatAnyone(nn.Module):
         self.object_transformer = QueryTransformer(model_cfg)
         self.object_summarizer = ObjectSummarizer(model_cfg)
         self.aux_computer = AuxComputer(cfg)
-        self.uncert_pred = UncertPred(model_cfg)
+        self.temp_sparity = UncertPred(model_cfg)
 
         self.register_buffer("pixel_mean", torch.Tensor(model_cfg.pixel_mean).view(-1, 1, 1), False)
         self.register_buffer("pixel_std", torch.Tensor(model_cfg.pixel_std).view(-1, 1, 1), False)
@@ -58,7 +58,7 @@ class MatAnyone(nn.Module):
         return others
 
     def pred_uncertainty(self, last_pix_feat: torch.Tensor, cur_pix_feat: torch.Tensor, last_mask: torch.Tensor, mem_val_diff:torch.Tensor):
-        logits = self.uncert_pred(last_frame_feat=last_pix_feat,
+        logits = self.temp_sparity(last_frame_feat=last_pix_feat,
                                 cur_frame_feat=cur_pix_feat,
                                 last_mask=last_mask,
                                 mem_val_diff=mem_val_diff)
