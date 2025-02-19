@@ -445,7 +445,8 @@ description = r"""
 🔥 MatAnyone is a practical human video matting framework supporting target assignment 🎯.<br>
 🎪 Try to drop your video/image, assign the target masks with a few clicks, and get the the matting results 🤡!<br>
 
-*Note: Due to the GPU memory constraints, any input with too big resolution will be resized to 1080p.*
+*Note: Due to the online GPU memory constraints, any input with too big resolution will be resized to 1080p.<br>
+🚀 If you wish to run MatAnyone on higher resolution inputs, we recommend luanching the [demo](https://github.com/pq-yang/MatAnyone#circus_tent-interactive-demo) locally.*
 """
 article = r"""
 <b>If MatAnyone is helpful, please help to 🌟 the <a href='https://github.com/pq-yang/MatAnyone' target='_blank'>Github Repo</a>. Thanks!</b>
@@ -474,7 +475,7 @@ If you have any questions, please feel free to reach me out at <b>peiqingyang99@
 <br>
 👏 **Acknowledgement**
 <br>
-This project is built upon [Cutie](https://github.com/hkchengrex/Cutie), with the interactive demo adapted from [ProPainter](https://huggingface.co/spaces/sczhou/ProPainter), leveraging segmentation capabilities from [Segment Anything](https://github.com/facebookresearch/segment-anything). Thanks for their awesome works!
+This project is built upon [Cutie](https://github.com/hkchengrex/Cutie), with the interactive demo adapted from [ProPainter](https://github.com/sczhou/ProPainter), leveraging segmentation capabilities from [Segment Anything](https://github.com/facebookresearch/segment-anything). Thanks for their awesome works!
 """
 
 my_custom_css = """
@@ -529,7 +530,6 @@ body {
     text-align: center;
     padding: 0;
     margin: 0;
-    background: white;
     height: 5vh;
     width: 80vw;
     font-family: "Sarpanch", sans-serif;
