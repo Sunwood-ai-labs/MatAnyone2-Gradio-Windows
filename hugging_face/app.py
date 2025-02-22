@@ -97,9 +97,8 @@ def get_frames_from_image(image_input, image_state):
                         gr.update(visible=True), gr.update(visible=True), \
                         gr.update(visible=True), gr.update(visible=True),\
                         gr.update(visible=True), gr.update(visible=True), \
-                        gr.update(visible=True), gr.update(visible=True), \
-                        gr.update(visible=True), gr.update(visible=True), \
-                        gr.update(visible=True), gr.update(visible=True, value=[]), \
+                        gr.update(visible=True), gr.update(visible=False), \
+                        gr.update(visible=False), gr.update(visible=True), \
                         gr.update(visible=True)
 
 # extract frames from upload video
@@ -166,7 +165,8 @@ def get_frames_from_video(video_input, video_state):
     video_info = "Video Name: {},\nFPS: {},\nTotal Frames: {},\nImage Size:{}".format(video_state["video_name"], round(video_state["fps"], 0), len(frames), image_size)
     model.samcontroler.sam_controler.reset_image() 
     model.samcontroler.sam_controler.set_image(video_state["origin_images"][0])
-    return video_state, video_info, video_state["origin_images"][0], gr.update(visible=True, maximum=len(frames), value=1), gr.update(visible=False, maximum=len(frames), value=len(frames)), \
+    return video_state, video_info, video_state["origin_images"][0], \
+                        gr.update(visible=True, maximum=len(frames), value=1), gr.update(visible=False, maximum=len(frames), value=len(frames)), \
                         gr.update(visible=True), gr.update(visible=True), \
                         gr.update(visible=True), gr.update(visible=True),\
                         gr.update(visible=True), gr.update(visible=True), \
@@ -445,11 +445,12 @@ description = r"""
 🔥 MatAnyone is a practical human video matting framework supporting target assignment 🎯.<br>
 🎪 Try to drop your video/image, assign the target masks with a few clicks, and get the the matting results 🤡!<br>
 
-*Note: Due to the online GPU memory constraints, any input with too big resolution will be resized to 1080p.<br>
-🚀 If you wish to run MatAnyone on higher resolution inputs, we recommend luanching the [demo](https://github.com/pq-yang/MatAnyone#circus_tent-interactive-demo) locally.*
+*Note: Due to the online GPU memory constraints, any input with too big resolution will be resized to 1080p.<br>*
+🚀 <b> If you encounter any issue (e.g., frozen video output) or wish to run on higher resolution inputs, please consider <u>duplicating this space</u> or 
+<u>launching the <a href='https://github.com/pq-yang/MatAnyone?tab=readme-ov-file#-interactive-demo' target='_blank'>demo</a> locally</u> following the GitHub instructions.</b>
 """
-article = r"""
-<b>If MatAnyone is helpful, please help to 🌟 the <a href='https://github.com/pq-yang/MatAnyone' target='_blank'>Github Repo</a>. Thanks!</b>
+article = r"""<h3>
+<b>If MatAnyone is helpful, please help to 🌟 the <a href='https://github.com/pq-yang/MatAnyone' target='_blank'>Github Repo</a>. Thanks!</b></h3>
 
 ---
 
