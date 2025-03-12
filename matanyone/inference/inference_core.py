@@ -1,4 +1,4 @@
-from typing import List, Optional, Iterable, Dict
+from typing import List, Optional, Iterable
 import logging
 from omegaconf import DictConfig
 
@@ -302,7 +302,6 @@ class InferenceCore:
 
             mask, _ = pad_divide_by(mask, 16)
             if need_segment:
-                print("HERE!!!!!!!!!!!")
                 # merge predicted mask with the incomplete input mask
                 pred_prob_no_bg = pred_prob_with_bg[1:]
                 # use the mutual exclusivity of segmentation

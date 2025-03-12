@@ -416,9 +416,14 @@ sam_checkpoint = load_file_from_url(sam_checkpoint_url_dict[args.sam_model_type]
 model = MaskGenerator(sam_checkpoint, args)
 
 # initialize matanyone
-pretrain_model_url = "https://github.com/pq-yang/MatAnyone/releases/download/v1.0.0"
-ckpt_path = load_file_from_url(os.path.join(pretrain_model_url, 'matanyone.pth'), checkpoint_folder)
-matanyone_model = get_matanyone_model(ckpt_path, args.device)
+# load from ckpt
+# pretrain_model_url = "https://github.com/pq-yang/MatAnyone/releases/download/v1.0.0"
+# ckpt_path = load_file_from_url(os.path.join(pretrain_model_url, 'matanyone.pth'), checkpoint_folder)
+# matanyone_model = get_matanyone_model(ckpt_path, args.device)
+# load from Hugging Face
+from matanyone.model.matanyone import MatAnyone
+matanyone_model = MatAnyone.from_pretrained("PeiqingYang/MatAnyone")
+
 matanyone_model = matanyone_model.to(args.device).eval()
 matanyone_processor = InferenceCore(matanyone_model, cfg=matanyone_model.cfg)
 
