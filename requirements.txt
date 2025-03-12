@@ -33,3 +33,4 @@ pyqtdarktheme
 imageio == 2.25.0
 imageio[ffmpeg]
 ffmpeg-python
+safetensors
