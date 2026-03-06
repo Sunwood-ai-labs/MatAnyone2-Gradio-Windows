@@ -568,7 +568,7 @@ If our work is useful for your research, please consider citing:
 @InProceedings{yang2025matanyone,
      title     = {{MatAnyone}: Stable Video Matting with Consistent Memory Propagation},
      author    = {Yang, Peiqing and Zhou, Shangchen and Zhao, Jixin and Tao, Qingyi and Loy, Chen Change},
-     booktitle = {arXiv preprint arXiv:2501.14677},
+     booktitle = {CVPR},
      year      = {2025}
 }
 ```
