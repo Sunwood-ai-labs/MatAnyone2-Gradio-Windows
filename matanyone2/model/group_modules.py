@@ -2,7 +2,7 @@ from typing import Optional
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from matanyone.model.channel_attn import CAResBlock
+from matanyone2.model.channel_attn import CAResBlock
 
 def interpolate_groups(g: torch.Tensor, ratio: float, mode: str,
                        align_corners: bool) -> torch.Tensor:

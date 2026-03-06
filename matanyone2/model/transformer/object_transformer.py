@@ -3,10 +3,10 @@ from omegaconf import DictConfig
 
 import torch
 import torch.nn as nn
-from matanyone.model.group_modules import GConv2d
-from matanyone.utils.tensor_utils import aggregate
-from matanyone.model.transformer.positional_encoding import PositionalEncoding
-from matanyone.model.transformer.transformer_layers import CrossAttention, SelfAttention, FFN, PixelFFN
+from matanyone2.model.group_modules import GConv2d
+from matanyone2.utils.tensor_utils import aggregate
+from matanyone2.model.transformer.positional_encoding import PositionalEncoding
+from matanyone2.model.transformer.transformer_layers import CrossAttention, SelfAttention, FFN, PixelFFN
 
 
 class QueryTransformerBlock(nn.Module):

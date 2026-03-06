@@ -3,10 +3,10 @@ from omegaconf import DictConfig
 from typing import List, Dict
 import torch
 
-from matanyone.inference.object_manager import ObjectManager
-from matanyone.inference.kv_memory_store import KeyValueMemoryStore
-from matanyone.model.matanyone import MatAnyone
-from matanyone.model.utils.memory_utils import get_similarity, do_softmax
+from matanyone2.inference.object_manager import ObjectManager
+from matanyone2.inference.kv_memory_store import KeyValueMemoryStore
+from matanyone2.model.matanyone2 import MatAnyone2
+from matanyone2.model.utils.memory_utils import get_similarity, do_softmax
 
 log = logging.getLogger()
 
@@ -113,7 +113,7 @@ class MemoryManager:
         return value
     
     def read_first_frame(self, last_msk_value, pix_feat: torch.Tensor, 
-             last_mask: torch.Tensor, network: MatAnyone, uncert_output=None) -> Dict[int, torch.Tensor]:
+             last_mask: torch.Tensor, network: MatAnyone2, uncert_output=None) -> Dict[int, torch.Tensor]:
         """
         Read from all memory stores and returns a single memory readout tensor for each object
 
@@ -166,7 +166,7 @@ class MemoryManager:
         return all_readout_mem
 
     def read(self, pix_feat: torch.Tensor, query_key: torch.Tensor, selection: torch.Tensor,
-             last_mask: torch.Tensor, network: MatAnyone, uncert_output=None, last_msk_value=None, ti=None,
+             last_mask: torch.Tensor, network: MatAnyone2, uncert_output=None, last_msk_value=None, ti=None,
              last_pix_feat=None, last_pred_mask=None) -> Dict[int, torch.Tensor]:
         """
         Read from all memory stores and returns a single memory readout tensor for each object

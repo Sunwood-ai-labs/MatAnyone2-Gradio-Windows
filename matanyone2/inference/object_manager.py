@@ -1,7 +1,7 @@
 from typing import Union, List, Dict
 
 import torch
-from matanyone.inference.object_info import ObjectInfo
+from matanyone2.inference.object_info import ObjectInfo
 
 
 class ObjectManager:

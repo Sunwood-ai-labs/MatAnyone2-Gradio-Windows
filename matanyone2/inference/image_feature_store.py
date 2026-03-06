@@ -1,7 +1,7 @@
 import warnings
 from typing import Iterable
 import torch
-from matanyone.model.matanyone import MatAnyone
+from matanyone2.model.matanyone2 import MatAnyone2
 
 
 class ImageFeatureStore:
@@ -13,7 +13,7 @@ class ImageFeatureStore:
 
     Feature of a frame should be associated with a unique index -- typically the frame id.
     """
-    def __init__(self, network: MatAnyone, no_warning: bool = False):
+    def __init__(self, network: MatAnyone2, no_warning: bool = False):
         self.network = network
         self._store = {}
         self.no_warning = no_warning

@@ -1,9 +1,13 @@
+
 import tqdm
 import torch
 from torchvision.transforms.functional import to_tensor
 import numpy as np
 import random
 import cv2
+from matanyone2.utils.device import get_default_device, safe_autocast_decorator
+
+device = get_default_device()
 
 def gen_dilate(alpha, min_kernel_size, max_kernel_size): 
     kernel_size = random.randint(min_kernel_size, max_kernel_size)
@@ -20,8 +24,8 @@ def gen_erosion(alpha, min_kernel_size, max_kernel_size):
     return erode.astype(np.float32)
 
 @torch.inference_mode()
-@torch.cuda.amp.autocast()
-def matanyone(processor, frames_np, mask, r_erode=0, r_dilate=0, n_warmup=10):
+@safe_autocast_decorator()
+def matanyone2(processor, frames_np, mask, r_erode=0, r_dilate=0, n_warmup=10):
     """
     Args:
         frames_np: [(H,W,C)]*n, uint8
@@ -41,14 +45,14 @@ def matanyone(processor, frames_np, mask, r_erode=0, r_dilate=0, n_warmup=10):
     if r_erode > 0:
         mask = gen_erosion(mask, r_erode, r_erode)
 
-    mask = torch.from_numpy(mask).cuda()
+    mask = torch.from_numpy(mask).to(device)
 
     frames_np = [frames_np[0]]* n_warmup + frames_np
 
     frames = []
     phas = []
     for ti, frame_single in tqdm.tqdm(enumerate(frames_np)):
-        image = to_tensor(frame_single).cuda().float()
+        image = to_tensor(frame_single).float().to(device)
 
         if ti == 0:
             output_prob = processor.step(image, mask, objects=objects)      # encode given mask
@@ -62,7 +66,7 @@ def matanyone(processor, frames_np, mask, r_erode=0, r_dilate=0, n_warmup=10):
         # convert output probabilities to an object mask
         mask = processor.output_prob_to_mask(output_prob)
 
-        pha = mask.unsqueeze(2).cpu().numpy()
+        pha = mask.unsqueeze(2).detach().to("cpu").numpy()
         com_np = frame_single / 255. * pha + bgr * (1 - pha)
         
         # DONOT save the warmup frames

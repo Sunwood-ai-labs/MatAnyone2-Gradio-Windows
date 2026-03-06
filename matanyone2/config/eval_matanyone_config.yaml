@@ -9,7 +9,7 @@ hydra:
   output_subdir: ${now:%Y-%m-%d_%H-%M-%S}-hydra
 
 amp: False
-weights: pretrained_models/matanyone.pth # default (can be modified from outside)
+weights: pretrained_models/matanyone2.pth # default (can be modified from outside)
 output_dir: null # defaults to run_dir; specify this to override
 flip_aug: False
 

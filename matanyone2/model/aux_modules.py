@@ -6,8 +6,8 @@ from omegaconf import DictConfig
 import torch
 import torch.nn as nn
 
-from matanyone.model.group_modules import GConv2d
-from matanyone.utils.tensor_utils import aggregate
+from matanyone2.model.group_modules import GConv2d
+from matanyone2.utils.tensor_utils import aggregate
 
 
 class LinearPredictor(nn.Module):

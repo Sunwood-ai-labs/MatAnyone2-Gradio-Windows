@@ -21,9 +21,13 @@ from tools.interact_tools import SamControler
 from tools.misc import get_device
 from tools.download_util import load_file_from_url
 
-from matanyone_wrapper import matanyone
-from matanyone.utils.get_default_model import get_matanyone_model
-from matanyone.inference.inference_core import InferenceCore
+from matanyone2_wrapper import matanyone2
+from matanyone2.utils.get_default_model import get_matanyone2_model
+from matanyone2.inference.inference_core import InferenceCore
+from hydra.core.global_hydra import GlobalHydra
+
+import warnings
+warnings.filterwarnings("ignore")
 
 def parse_augment():
     parser = argparse.ArgumentParser()
@@ -121,7 +125,6 @@ def get_frames_from_video(video_input, video_state):
     except Exception as e:
         print(f"Audio extraction error: {str(e)}")
         audio_path = ""  # Set to "" if extraction fails
-    # print(f'audio_path: {audio_path}')
     
     # extract frames
     try:
@@ -140,8 +143,8 @@ def get_frames_from_video(video_input, video_state):
         print("read_frame_source:{} error. {}\n".format(video_path, str(e)))
     image_size = (frames[0].shape[0],frames[0].shape[1]) 
 
-    # resize if resolution too big
-    if image_size[0]>=1280 and image_size[0]>=1280:
+    # [remove for local demo] resize if resolution too big
+    if image_size[0]>=1080 and image_size[0]>=1080:
         scale = 1080 / min(image_size)
         new_w = int(image_size[1] * scale)
         new_h = int(image_size[0] * scale)
@@ -165,8 +168,7 @@ def get_frames_from_video(video_input, video_state):
     video_info = "Video Name: {},\nFPS: {},\nTotal Frames: {},\nImage Size:{}".format(video_state["video_name"], round(video_state["fps"], 0), len(frames), image_size)
     model.samcontroler.sam_controler.reset_image() 
     model.samcontroler.sam_controler.set_image(video_state["origin_images"][0])
-    return video_state, video_info, video_state["origin_images"][0], \
-                        gr.update(visible=True, maximum=len(frames), value=1), gr.update(visible=False, maximum=len(frames), value=len(frames)), \
+    return video_state, video_info, video_state["origin_images"][0], gr.update(visible=True, maximum=len(frames), value=1), gr.update(visible=False, maximum=len(frames), value=len(frames)), \
                         gr.update(visible=True), gr.update(visible=True), \
                         gr.update(visible=True), gr.update(visible=True),\
                         gr.update(visible=True), gr.update(visible=True), \
@@ -267,8 +269,18 @@ def show_mask(video_state, interactive_state, mask_dropdown):
         return select_frame
 
 # image matting
-def image_matting(video_state, interactive_state, mask_dropdown, erode_kernel_size, dilate_kernel_size, refine_iter):
-    matanyone_processor = InferenceCore(matanyone_model, cfg=matanyone_model.cfg)
+def image_matting(video_state, interactive_state, mask_dropdown, erode_kernel_size, dilate_kernel_size, refine_iter, model_selection):
+    # Load model if not already loaded
+    try:
+        selected_model = load_model(model_selection)
+    except (FileNotFoundError, ValueError) as e:
+        # Fallback to first available model
+        if available_models:
+            print(f"Warning: {str(e)}. Using {available_models[0]} instead.")
+            selected_model = load_model(available_models[0])
+        else:
+            raise ValueError("No models are available! Please check if the model files exist.")
+    matanyone_processor = InferenceCore(selected_model, cfg=selected_model.cfg)
     if interactive_state["track_end_number"]:
         following_frames = video_state["origin_images"][video_state["select_frame_number"]:interactive_state["track_end_number"]]
     else:
@@ -289,14 +301,25 @@ def image_matting(video_state, interactive_state, mask_dropdown, erode_kernel_si
     # operation error
     if len(np.unique(template_mask))==1:
         template_mask[0][0]=1
-    foreground, alpha = matanyone(matanyone_processor, following_frames, template_mask*255, r_erode=erode_kernel_size, r_dilate=dilate_kernel_size, n_warmup=refine_iter)
+    foreground, alpha = matanyone2(matanyone_processor, following_frames, template_mask*255, r_erode=erode_kernel_size, r_dilate=dilate_kernel_size, n_warmup=refine_iter)
     foreground_output = Image.fromarray(foreground[-1])
     alpha_output = Image.fromarray(alpha[-1][:,:,0])
+
     return foreground_output, alpha_output
 
 # video matting
-def video_matting(video_state, interactive_state, mask_dropdown, erode_kernel_size, dilate_kernel_size):
-    matanyone_processor = InferenceCore(matanyone_model, cfg=matanyone_model.cfg)
+def video_matting(video_state, interactive_state, mask_dropdown, erode_kernel_size, dilate_kernel_size, model_selection):
+    # Load model if not already loaded
+    try:
+        selected_model = load_model(model_selection)
+    except (FileNotFoundError, ValueError) as e:
+        # Fallback to first available model
+        if available_models:
+            print(f"Warning: {str(e)}. Using {available_models[0]} instead.")
+            selected_model = load_model(available_models[0])
+        else:
+            raise ValueError("No models are available! Please check if the model files exist.")
+    matanyone_processor = InferenceCore(selected_model, cfg=selected_model.cfg)
     if interactive_state["track_end_number"]:
         following_frames = video_state["origin_images"][video_state["select_frame_number"]:interactive_state["track_end_number"]]
     else:
@@ -320,11 +343,11 @@ def video_matting(video_state, interactive_state, mask_dropdown, erode_kernel_si
     # operation error
     if len(np.unique(template_mask))==1:
         template_mask[0][0]=1
-    foreground, alpha = matanyone(matanyone_processor, following_frames, template_mask*255, r_erode=erode_kernel_size, r_dilate=dilate_kernel_size)
+    foreground, alpha = matanyone2(matanyone_processor, following_frames, template_mask*255, r_erode=erode_kernel_size, r_dilate=dilate_kernel_size)
 
     foreground_output = generate_video_from_frames(foreground, output_path="./results/{}_fg.mp4".format(video_state["video_name"]), fps=fps, audio_path=audio_path) # import video_input to name the output video
     alpha_output = generate_video_from_frames(alpha, output_path="./results/{}_alpha.mp4".format(video_state["video_name"]), fps=fps, gray2rgb=True, audio_path=audio_path) # import video_input to name the output video
-
+    
     return foreground_output, alpha_output
 
 
@@ -415,47 +438,113 @@ sam_checkpoint = load_file_from_url(sam_checkpoint_url_dict[args.sam_model_type]
 # initialize sams
 model = MaskGenerator(sam_checkpoint, args)
 
-# initialize matanyone
-# load from ckpt
-# pretrain_model_url = "https://github.com/pq-yang/MatAnyone/releases/download/v1.0.0"
-# ckpt_path = load_file_from_url(os.path.join(pretrain_model_url, 'matanyone.pth'), checkpoint_folder)
-# matanyone_model = get_matanyone_model(ckpt_path, args.device)
-# load from Hugging Face
-from matanyone.model.matanyone import MatAnyone
-matanyone_model = MatAnyone.from_pretrained("PeiqingYang/MatAnyone")
+# initialize matanyone - lazy loading
+# Model display names to file names mapping
+model_display_to_file = {
+    "MatAnyone": "matanyone.pth",
+    "MatAnyone 2": "matanyone2.pth"
+}
 
-matanyone_model = matanyone_model.to(args.device).eval()
-matanyone_processor = InferenceCore(matanyone_model, cfg=matanyone_model.cfg)
+# Model URLs
+model_urls = {
+    "matanyone.pth": "https://github.com/pq-yang/MatAnyone/releases/download/v1.0.0/matanyone.pth",
+    "matanyone2.pth": "https://github.com/pq-yang/MatAnyone2/releases/download/v1.0.0/matanyone2.pth"
+}
+
+# Model paths - download models using load_file_from_url
+model_paths = {
+    "matanyone.pth": load_file_from_url(model_urls["matanyone.pth"], checkpoint_folder),
+    "matanyone2.pth": load_file_from_url(model_urls["matanyone2.pth"], checkpoint_folder)
+}
+
+# Cache for loaded models (lazy loading)
+loaded_models = {}
+
+def load_model(display_name):
+    """Load a model if not already loaded"""
+    # Convert display name to file name
+    if display_name in model_display_to_file:
+        model_file = model_display_to_file[display_name]
+    elif display_name in model_paths:
+        # Also support direct file name for backward compatibility
+        model_file = display_name
+    else:
+        raise ValueError(f"Unknown model: {display_name}")
+    
+    if model_file in loaded_models:
+        return loaded_models[model_file]
+    
+    if model_file not in model_paths:
+        raise ValueError(f"Unknown model file: {model_file}")
+    
+    ckpt_path = model_paths[model_file]
+    if not os.path.exists(ckpt_path):
+        raise FileNotFoundError(f"Model file not found: {ckpt_path}")
+    
+    # Clear Hydra instance if already initialized (to allow loading different models)
+    try:
+        GlobalHydra.instance().clear()
+    except:
+        pass  # If Hydra is not initialized, this is fine
+    
+    print(f"Loading model: {display_name} ({model_file})...")
+    model = get_matanyone2_model(ckpt_path, args.device)
+    model = model.to(args.device).eval()
+    loaded_models[model_file] = model
+    print(f"Model {display_name} loaded successfully.")
+    return model
+
+# Get available model choices for the UI (check if files exist)
+# Order: MatAnyone 2 first, then MatAnyone
+available_models = []
+# Check MatAnyone 2 first
+if "MatAnyone 2" in model_display_to_file:
+    file_name = model_display_to_file["MatAnyone 2"]
+    if file_name in model_paths and os.path.exists(model_paths[file_name]):
+        available_models.append("MatAnyone 2")
+# Then check MatAnyone
+if "MatAnyone" in model_display_to_file:
+    file_name = model_display_to_file["MatAnyone"]
+    if file_name in model_paths and os.path.exists(model_paths[file_name]):
+        available_models.append("MatAnyone")
+
+if not available_models:
+    raise RuntimeError("No models are available! Please ensure at least one model file exists in ../pretrained_models/")
+default_model = "MatAnyone 2" if "MatAnyone 2" in available_models else available_models[0]
 
 # download test samples
-media_url = "https://github.com/pq-yang/MatAnyone/releases/download/media/"
 test_sample_path = os.path.join('/home/user/app/hugging_face/', "test_sample/")
-load_file_from_url(os.path.join(media_url, 'test-sample0-720p.mp4'), test_sample_path)
-load_file_from_url(os.path.join(media_url, 'test-sample1-720p.mp4'), test_sample_path)
-load_file_from_url(os.path.join(media_url, 'test-sample2-720p.mp4'), test_sample_path)
-load_file_from_url(os.path.join(media_url, 'test-sample3-720p.mp4'), test_sample_path)
-load_file_from_url(os.path.join(media_url, 'test-sample0.jpg'), test_sample_path)
-load_file_from_url(os.path.join(media_url, 'test-sample1.jpg'), test_sample_path)
+load_file_from_url('https://github.com/pq-yang/MatAnyone2/releases/download/media/test-sample-0-1080p.mp4', test_sample_path)
+load_file_from_url('https://github.com/pq-yang/MatAnyone2/releases/download/media/test-sample-1-1080p.mp4', test_sample_path)
+load_file_from_url('https://github.com/pq-yang/MatAnyone2/releases/download/media/test-sample-2-720p.mp4', test_sample_path)
+load_file_from_url('https://github.com/pq-yang/MatAnyone2/releases/download/media/test-sample-3-720p.mp4', test_sample_path)
+load_file_from_url('https://github.com/pq-yang/MatAnyone2/releases/download/media/test-sample-4-720p.mp4', test_sample_path)
+load_file_from_url('https://github.com/pq-yang/MatAnyone2/releases/download/media/test-sample-5-720p.mp4', test_sample_path)
+load_file_from_url('https://github.com/pq-yang/MatAnyone2/releases/download/media/test-sample-0.jpg', test_sample_path)
+load_file_from_url('https://github.com/pq-yang/MatAnyone2/releases/download/media/test-sample-1.jpg', test_sample_path)
+load_file_from_url('https://github.com/pq-yang/MatAnyone2/releases/download/media/test-sample-2.jpg', test_sample_path)
+load_file_from_url('https://github.com/pq-yang/MatAnyone2/releases/download/media/test-sample-3.jpg', test_sample_path)
 
 # download assets
 assets_path = os.path.join('/home/user/app/hugging_face/', "assets/")
-load_file_from_url(os.path.join(media_url, 'tutorial_single_target.mp4'), assets_path)
-load_file_from_url(os.path.join(media_url, 'tutorial_multi_targets.mp4'), assets_path)
+load_file_from_url('https://github.com/pq-yang/MatAnyone/releases/download/media/tutorial_single_target.mp4', assets_path)
+load_file_from_url('https://github.com/pq-yang/MatAnyone/releases/download/media/tutorial_multi_targets.mp4', assets_path)
 
 # documents
-title = r"""<div class="multi-layer" align="center"><span>MatAnyone</span></div>
+title = r"""<div class="multi-layer" align="center"><span>MatAnyone Series</span></div>
 """
 description = r"""
-<b>Official Gradio demo</b> for <a href='https://github.com/pq-yang/MatAnyone' target='_blank'><b>MatAnyone: Stable Video Matting with Consistent Memory Propagation</b></a>.<br>
-🔥 MatAnyone is a practical human video matting framework supporting target assignment 🎯.<br>
-🎪 Try to drop your video/image, assign the target masks with a few clicks, and get the the matting results 🤡!<br>
+<b>Official Gradio demo</b> for <a href='https://github.com/pq-yang/MatAnyone2' target='_blank'><b>MatAnyone 2</b></a> and <a href='https://github.com/pq-yang/MatAnyone' target='_blank'><b>MatAnyone</b></a>.<br>
+🔥 MatAnyone series provide practical human video matting framework supporting target assignment.<br>
+🧐 <b>We use <u>MatAnyone 2</u> as the default model. You can also choose <u>MatAnyone</u> in "Model Selection".</b><br>
+🎪 Try to drop your video/image, assign the target masks with a few clicks, and get the the matting results!<br>
 
 *Note: Due to the online GPU memory constraints, any input with too big resolution will be resized to 1080p.<br>*
-🚀 <b> If you encounter any issue (e.g., frozen video output) or wish to run on higher resolution inputs, please consider <u>duplicating this space</u> or 
-<u>launching the <a href='https://github.com/pq-yang/MatAnyone?tab=readme-ov-file#-interactive-demo' target='_blank'>demo</a> locally</u> following the GitHub instructions.</b>
+🚀 <b> If you encounter any issue (e.g., frozen video output) or wish to run on higher resolution inputs, please consider duplicating this space or 
+launching the demo locally following the <a href='https://github.com/pq-yang/MatAnyone2?tab=readme-ov-file#-interactive-demo' target='_blank'>GitHub instructions</a>.</b>
 """
 article = r"""<h3>
-<b>If MatAnyone is helpful, please help to 🌟 the <a href='https://github.com/pq-yang/MatAnyone' target='_blank'>Github Repo</a>. Thanks!</b></h3>
+<b>If our projects are helpful, please help to 🌟 the Github Repo for <a href='https://github.com/pq-yang/MatAnyone2' target='_blank'>MatAnyone 2</a> and <a href='https://github.com/pq-yang/MatAnyone' target='_blank'>MatAnyone</a>. Thanks!</b></h3>
 
 ---
 
@@ -463,6 +552,13 @@ article = r"""<h3>
 <br>
 If our work is useful for your research, please consider citing:
 ```bibtex
+@InProceedings{yang2026matanyone2,
+      title     = {{MatAnyone 2}: Scaling Video Matting via a Learned Quality Evaluator},
+      author    = {Yang, Peiqing and Zhou, Shangchen and Hao, Kai and Tao, Qingyi},
+      booktitle = {CVPR},
+      year      = {2026}
+}
+
 @InProceedings{yang2025matanyone,
      title     = {{MatAnyone}: Stable Video Matting with Consistent Memory Propagation},
      author    = {Yang, Peiqing and Zhou, Shangchen and Zhao, Jixin and Tao, Qingyi and Loy, Chen Change},
@@ -558,10 +654,10 @@ with gr.Blocks(theme=gr.themes.Monochrome(), css=my_custom_css) as demo:
         <div class="title-container">
             <h1 class="title is-2 publication-title"
                 style="font-size:50px; font-family: 'Sarpanch', serif; 
-                    background: linear-gradient(to right, #d231d8, #2dc464); 
+                    background: linear-gradient(to right, #000000, #2dc464); 
                     display: inline-block; -webkit-background-clip: text; 
                     -webkit-text-fill-color: transparent;">
-                MatAnyone
+                MatAnyone Series
             </h1>
         </div>
     ''')
@@ -614,7 +710,14 @@ with gr.Blocks(theme=gr.themes.Monochrome(), css=my_custom_css) as demo:
 
             with gr.Group(elem_classes="gr-monochrome-group", visible=True):
                 with gr.Row():
-                    with gr.Accordion('MatAnyone Settings (click to expand)', open=False):
+                    model_selection = gr.Radio(
+                        choices=available_models,
+                        value=default_model,
+                        label="Model Selection",
+                        info="Choose the model to use for matting",
+                        interactive=True)
+                with gr.Row():
+                    with gr.Accordion('Model Settings (click to expand)', open=False):
                         with gr.Row():
                             erode_kernel_size = gr.Slider(label='Erode Kernel Size',
                                                     minimum=0,
@@ -722,7 +825,7 @@ with gr.Blocks(theme=gr.themes.Monochrome(), css=my_custom_css) as demo:
             # video matting
             matting_button.click(
                 fn=video_matting,
-                inputs=[video_state, interactive_state, mask_dropdown, erode_kernel_size, dilate_kernel_size],
+                inputs=[video_state, interactive_state, mask_dropdown, erode_kernel_size, dilate_kernel_size, model_selection],
                 outputs=[foreground_video_output, alpha_video_output]
             )
 
@@ -775,7 +878,7 @@ with gr.Blocks(theme=gr.themes.Monochrome(), css=my_custom_css) as demo:
             gr.Markdown("---")
             gr.Markdown("## Examples")
             gr.Examples(
-                examples=[os.path.join(os.path.dirname(__file__), "./test_sample/", test_sample) for test_sample in ["test-sample0-720p.mp4", "test-sample1-720p.mp4", "test-sample2-720p.mp4", "test-sample3-720p.mp4"]],
+                examples=[os.path.join(os.path.dirname(__file__), "./test_sample/", test_sample) for test_sample in ["test-sample-0-1080p.mp4", "test-sample-1-1080p.mp4", "test-sample-2-720p.mp4", "test-sample-3-720p.mp4", "test-sample-4-720p.mp4", "test-sample-5-720p.mp4"]],
                 inputs=[video_input],
             )
 
@@ -811,7 +914,14 @@ with gr.Blocks(theme=gr.themes.Monochrome(), css=my_custom_css) as demo:
 
             with gr.Group(elem_classes="gr-monochrome-group", visible=True):
                 with gr.Row():
-                    with gr.Accordion('MatAnyone Settings (click to expand)', open=False):
+                    model_selection = gr.Radio(
+                        choices=available_models,
+                        value=default_model,
+                        label="Model Selection",
+                        info="Choose the model to use for matting",
+                        interactive=True)
+                with gr.Row():
+                    with gr.Accordion('Model Settings (click to expand)', open=False):
                         with gr.Row():
                             erode_kernel_size = gr.Slider(label='Erode Kernel Size',
                                                     minimum=0,
@@ -918,7 +1028,7 @@ with gr.Blocks(theme=gr.themes.Monochrome(), css=my_custom_css) as demo:
             # image matting
             matting_button.click(
                 fn=image_matting,
-                inputs=[image_state, interactive_state, mask_dropdown, erode_kernel_size, dilate_kernel_size, image_selection_slider],
+                inputs=[image_state, interactive_state, mask_dropdown, erode_kernel_size, dilate_kernel_size, image_selection_slider, model_selection],
                 outputs=[foreground_image_output, alpha_image_output]
             )
 
@@ -971,7 +1081,7 @@ with gr.Blocks(theme=gr.themes.Monochrome(), css=my_custom_css) as demo:
             gr.Markdown("---")
             gr.Markdown("## Examples")
             gr.Examples(
-                examples=[os.path.join(os.path.dirname(__file__), "./test_sample/", test_sample) for test_sample in ["test-sample0.jpg", "test-sample1.jpg"]],
+                examples=[os.path.join(os.path.dirname(__file__), "./test_sample/", test_sample) for test_sample in ["test-sample-0.jpg", "test-sample-1.jpg", "test-sample-2.jpg", "test-sample-3.jpg"]],
                 inputs=[image_input],
             )
 

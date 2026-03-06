@@ -4,7 +4,8 @@ from omegaconf import DictConfig
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from matanyone.model.transformer.positional_encoding import PositionalEncoding
+from matanyone2.model.transformer.positional_encoding import PositionalEncoding
+from matanyone2.utils.device import safe_autocast
 
 
 # @torch.jit.script
@@ -75,7 +76,7 @@ class ObjectSummarizer(nn.Module):
             pe = self.pos_enc(value)
             value = value + pe
 
-        with torch.cuda.amp.autocast(enabled=False):
+        with safe_autocast(enabled=False):  # autocast disabled intentionally
             value = value.float()
             feature = self.feature_pred(value)
             logits = self.weights_pred(value)
