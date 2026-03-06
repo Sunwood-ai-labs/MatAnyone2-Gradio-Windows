@@ -368,34 +368,40 @@ def add_audio_to_video(video_path, audio_path, output_path):
 
 
 def generate_video_from_frames(frames, output_path, fps=30, gray2rgb=False, audio_path=""):
-    """
-    Generates a video from a list of frames.
-    
-    Args:
-        frames (list of numpy arrays): The frames to include in the video.
-        output_path (str): The path to save the generated video.
-        fps (int, optional): The frame rate of the output video. Defaults to 30.
-    """
-    frames = torch.from_numpy(np.asarray(frames))
-    _, h, w, _ = frames.shape
+    frames = np.asarray(frames)
+
     if gray2rgb:
         frames = np.repeat(frames, 3, axis=3)
 
+    _, h, w, _ = frames.shape
+    h = h // 2 * 2
+    w = w // 2 * 2
+
+    if frames.shape[1] != h or frames.shape[2] != w:
+        frames = np.asarray([
+            cv2.resize(frame, (w, h), interpolation=cv2.INTER_LINEAR)
+            for frame in frames
+        ])
+
     if not os.path.exists(os.path.dirname(output_path)):
         os.makedirs(os.path.dirname(output_path))
+
     video_temp_path = output_path.replace(".mp4", "_temp.mp4")
-    
-    # resize back to ensure input resolution
-    imageio.mimwrite(video_temp_path, frames, fps=fps, quality=7, 
-                     codec='libx264', ffmpeg_params=["-vf", f"scale={w}:{h}"])
-    
-    # add audio to video if audio path exists
+
+    imageio.mimwrite(
+        video_temp_path,
+        frames,
+        fps=fps,
+        quality=7,
+        codec="libx264",
+        macro_block_size=1
+    )
+
     if audio_path != "" and os.path.exists(audio_path):
-        output_path = add_audio_to_video(video_temp_path, audio_path, output_path)    
+        output_path = add_audio_to_video(video_temp_path, audio_path, output_path)
         os.remove(video_temp_path)
         return output_path
-    else:
-        return video_temp_path
+    return video_temp_path
 
 # reset all states for a new input
 def restart():
