@@ -520,8 +520,8 @@ default_model = "MatAnyone 2" if "MatAnyone 2" in available_models else availabl
 
 # download test samples
 test_sample_path = os.path.join('/home/user/app/hugging_face/', "test_sample/")
-load_file_from_url('https://github.com/pq-yang/MatAnyone2/releases/download/media/test-sample-0-1080p.mp4', test_sample_path)
-load_file_from_url('https://github.com/pq-yang/MatAnyone2/releases/download/media/test-sample-1-1080p.mp4', test_sample_path)
+load_file_from_url('https://github.com/pq-yang/MatAnyone2/releases/download/media/test-sample-0-720p.mp4', test_sample_path)
+load_file_from_url('https://github.com/pq-yang/MatAnyone2/releases/download/media/test-sample-1-720p.mp4', test_sample_path)
 load_file_from_url('https://github.com/pq-yang/MatAnyone2/releases/download/media/test-sample-2-720p.mp4', test_sample_path)
 load_file_from_url('https://github.com/pq-yang/MatAnyone2/releases/download/media/test-sample-3-720p.mp4', test_sample_path)
 load_file_from_url('https://github.com/pq-yang/MatAnyone2/releases/download/media/test-sample-4-720p.mp4', test_sample_path)
@@ -638,7 +638,7 @@ body {
     text-align: center;
     padding: 0;
     margin: 0;
-    height: 5vh;
+    height: 2vh;
     width: 80vw;
     font-family: "Sarpanch", sans-serif;
     font-weight: 60;
@@ -884,7 +884,7 @@ with gr.Blocks(theme=gr.themes.Monochrome(), css=my_custom_css) as demo:
             gr.Markdown("---")
             gr.Markdown("## Examples")
             gr.Examples(
-                examples=[os.path.join(os.path.dirname(__file__), "./test_sample/", test_sample) for test_sample in ["test-sample-0-1080p.mp4", "test-sample-1-1080p.mp4", "test-sample-2-720p.mp4", "test-sample-3-720p.mp4", "test-sample-4-720p.mp4", "test-sample-5-720p.mp4"]],
+                examples=[os.path.join(os.path.dirname(__file__), "./test_sample/", test_sample) for test_sample in ["test-sample-0-720p.mp4", "test-sample-1-720p.mp4", "test-sample-2-720p.mp4", "test-sample-3-720p.mp4", "test-sample-4-720p.mp4", "test-sample-5-720p.mp4"]],
                 inputs=[video_input],
             )
 
