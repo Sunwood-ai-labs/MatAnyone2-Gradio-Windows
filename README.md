@@ -5,6 +5,7 @@ colorFrom: red
 colorTo: green
 sdk: gradio
 sdk_version: 4.31.0
+python_version: 3.10.13
 app_file: hugging_face/app.py
 pinned: false
 license: other
