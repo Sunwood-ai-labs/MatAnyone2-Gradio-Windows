@@ -34,3 +34,4 @@ imageio == 2.25.0
 imageio[ffmpeg]
 ffmpeg-python
 safetensors
+huggingface_hub < 1.0
