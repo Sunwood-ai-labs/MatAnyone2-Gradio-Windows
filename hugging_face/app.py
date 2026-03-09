@@ -1,15 +1,22 @@
-import sys
-sys.path.append("../")
-sys.path.append("../../")
-
 import os
+import sys
 import json
 import time
+import glob
+import shutil
 import psutil
 import ffmpeg
 import imageio
+import imageio_ffmpeg
 import argparse
 from PIL import Image
+
+APP_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_DIR = os.path.dirname(APP_DIR)
+
+for path in (APP_DIR, REPO_DIR):
+    if path not in sys.path:
+        sys.path.append(path)
 
 import cv2
 import torch
@@ -29,11 +36,52 @@ from hydra.core.global_hydra import GlobalHydra
 import warnings
 warnings.filterwarnings("ignore")
 
+def configure_ffmpeg_binary():
+    candidates = []
+
+    env_ffmpeg = os.environ.get("IMAGEIO_FFMPEG_EXE")
+    if env_ffmpeg:
+        candidates.append(env_ffmpeg)
+
+    path_ffmpeg = shutil.which("ffmpeg")
+    if path_ffmpeg:
+        candidates.append(path_ffmpeg)
+
+    try:
+        bundled_ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
+        if bundled_ffmpeg:
+            candidates.append(bundled_ffmpeg)
+    except Exception:
+        pass
+
+    winget_root = os.path.join(os.environ.get("LOCALAPPDATA", ""), "Microsoft", "WinGet", "Packages")
+    if os.path.isdir(winget_root):
+        candidates.extend(glob.glob(os.path.join(winget_root, "**", "ffmpeg.exe"), recursive=True))
+
+    for candidate in candidates:
+        if candidate and os.path.exists(candidate):
+            ffmpeg_dir = os.path.dirname(candidate)
+            os.environ["IMAGEIO_FFMPEG_EXE"] = candidate
+            current_path = os.environ.get("PATH", "")
+            path_entries = current_path.split(os.pathsep) if current_path else []
+            if ffmpeg_dir not in path_entries:
+                os.environ["PATH"] = ffmpeg_dir + os.pathsep + current_path if current_path else ffmpeg_dir
+            return candidate
+
+    return None
+
+FFMPEG_BINARY = configure_ffmpeg_binary()
+if FFMPEG_BINARY:
+    print(f"Using ffmpeg binary: {FFMPEG_BINARY}")
+else:
+    print("Warning: ffmpeg binary was not found at startup. Video audio may be unavailable.")
+
 def parse_augment():
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', type=str, default=None)
     parser.add_argument('--sam_model_type', type=str, default="vit_h")
-    parser.add_argument('--port', type=int, default=8000, help="only useful when running gradio applications")  
+    parser.add_argument('--port', type=int, default=7860, help="Gradio server port")
+    parser.add_argument('--server_name', type=str, default="127.0.0.1", help="Gradio bind address")
     parser.add_argument('--mask_save', default=False)
     args = parser.parse_args()
     
@@ -438,7 +486,7 @@ sam_checkpoint_url_dict = {
     'vit_l': "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_l_0b3195.pth",
     'vit_b': "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth"
 }
-checkpoint_folder = os.path.join('/home/user/app/', 'pretrained_models')
+checkpoint_folder = os.path.join(REPO_DIR, 'pretrained_models')
 
 sam_checkpoint = load_file_from_url(sam_checkpoint_url_dict[args.sam_model_type], checkpoint_folder)
 # initialize sams
@@ -519,7 +567,7 @@ if not available_models:
 default_model = "MatAnyone 2" if "MatAnyone 2" in available_models else available_models[0]
 
 # download test samples
-test_sample_path = os.path.join('/home/user/app/hugging_face/', "test_sample/")
+test_sample_path = os.path.join(APP_DIR, "test_sample")
 load_file_from_url('https://github.com/pq-yang/MatAnyone2/releases/download/media/test-sample-0-720p.mp4', test_sample_path)
 load_file_from_url('https://github.com/pq-yang/MatAnyone2/releases/download/media/test-sample-1-720p.mp4', test_sample_path)
 load_file_from_url('https://github.com/pq-yang/MatAnyone2/releases/download/media/test-sample-2-720p.mp4', test_sample_path)
@@ -532,7 +580,7 @@ load_file_from_url('https://github.com/pq-yang/MatAnyone2/releases/download/medi
 load_file_from_url('https://github.com/pq-yang/MatAnyone2/releases/download/media/test-sample-3.jpg', test_sample_path)
 
 # download assets
-assets_path = os.path.join('/home/user/app/hugging_face/', "assets/")
+assets_path = os.path.join(APP_DIR, "assets")
 load_file_from_url('https://github.com/pq-yang/MatAnyone/releases/download/media/tutorial_single_target.mp4', assets_path)
 load_file_from_url('https://github.com/pq-yang/MatAnyone/releases/download/media/tutorial_multi_targets.mp4', assets_path)
 
@@ -596,20 +644,12 @@ button {border-radius: 8px !important;}
 .green_button:hover {background-color: #77bd79 !important;}
 
 .mask_button_group {gap: 10px !important;}
-.video .wrap.svelte-lcpz3o {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+.video video {
+    display: block !important;
+    width: 100% !important;
     height: auto !important;
     max-height: 300px !important;
-}
-.video .wrap.svelte-lcpz3o > :first-child {
-    height: auto !important;
-    width: 100% !important;
     object-fit: contain !important;
-}
-.video .container.svelte-sxyn79 {
-    display: none !important;
 }
 .margin_center {width: 50% !important; margin: auto !important;}
 .jc_center {justify-content: center !important;}
@@ -676,11 +716,11 @@ with gr.Blocks(theme=gr.themes.Monochrome(), css=my_custom_css) as demo:
                 with gr.Row():
                     with gr.Column():
                         gr.Markdown("### Case 1: Single Target")
-                        gr.Video(value="/home/user/app/hugging_face/assets/tutorial_single_target.mp4", elem_classes="video")
+                        gr.Video(value=os.path.join(assets_path, "tutorial_single_target.mp4"), elem_classes="video")
 
                     with gr.Column():
                         gr.Markdown("### Case 2: Multiple Targets")
-                        gr.Video(value="/home/user/app/hugging_face/assets/tutorial_multi_targets.mp4", elem_classes="video")
+                        gr.Video(value=os.path.join(assets_path, "tutorial_multi_targets.mp4"), elem_classes="video")
 
     with gr.Tabs():
         with gr.TabItem("Video"):
@@ -1094,4 +1134,8 @@ with gr.Blocks(theme=gr.themes.Monochrome(), css=my_custom_css) as demo:
     gr.Markdown(article)
 
 demo.queue()
-demo.launch(debug=True)
+demo.launch(
+    debug=True,
+    server_name=args.server_name,
+    server_port=args.port,
+)

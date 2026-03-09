@@ -6,7 +6,7 @@ hickle >= 5.0
 tensorboard >= 2.11
 numpy >= 1.21
 git+https://github.com/facebookresearch/segment-anything.git
-# gradio==4.31.0
+gradio==4.31.0
 fastapi==0.111.0
 pydantic==2.7.1
 opencv-python >= 4.8
