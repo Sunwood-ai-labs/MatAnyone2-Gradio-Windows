@@ -52,8 +52,16 @@ uv pip install --python .\.venv\Scripts\python.exe -r requirements.txt
 
 Run the Gradio app:
 
+GPU mode:
+
 ```powershell
 uv run --python .\.venv\Scripts\python.exe hugging_face/app.py --device cuda --port 7860 --server_name 127.0.0.1
+```
+
+CPU mode:
+
+```powershell
+uv run --python .\.venv\Scripts\python.exe hugging_face/app.py --device cpu --port 7860 --server_name 127.0.0.1
 ```
 
 The app will start on [http://127.0.0.1:7860](http://127.0.0.1:7860).
@@ -62,5 +70,4 @@ Useful options:
 
 ```powershell
 uv run --python .\.venv\Scripts\python.exe hugging_face/app.py --device cuda --port 7861 --server_name 127.0.0.1
-uv run --python .\.venv\Scripts\python.exe hugging_face/app.py --device cpu --port 7860 --server_name 127.0.0.1
 ```
