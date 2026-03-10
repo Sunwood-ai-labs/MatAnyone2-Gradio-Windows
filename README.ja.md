@@ -76,7 +76,7 @@ CPU 実行:
 uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --device cpu --port 7860 --server_name 127.0.0.1
 ```
 
-起動後は [http://127.0.0.1:7860](http://127.0.0.1:7860) を開いてください。
+起動後は `http://127.0.0.1:7860` を開いてください。
 
 補助コマンド:
 

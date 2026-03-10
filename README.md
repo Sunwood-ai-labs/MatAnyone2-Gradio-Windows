@@ -76,7 +76,7 @@ Launch the app in CPU mode:
 uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --device cpu --port 7860 --server_name 127.0.0.1
 ```
 
-Then open [http://127.0.0.1:7860](http://127.0.0.1:7860).
+Then open `http://127.0.0.1:7860`.
 
 Useful variants:
 
