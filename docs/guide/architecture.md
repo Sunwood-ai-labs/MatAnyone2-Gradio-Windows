@@ -9,27 +9,31 @@ Diagram source files:
 
 ## Repository layout
 
-- `hugging_face/app.py`: Gradio entrypoint, checkpoint loading, ffmpeg detection, UI wiring
+- `hugging_face/app.py`: Gradio entrypoint and UI wiring
 - `hugging_face/matanyone2_wrapper.py`: matting loop wrapper around the inference core
 - `hugging_face/tools/`: click prompting, mask painting, download helpers, UI support code
+- `matanyone2/demo_core.py`: shared runtime for Gradio and CLI, including ffmpeg setup, media loading, SAM integration, matting orchestration, output writing, and debug artifact export
+- `matanyone2/cli.py`: direct CLI entrypoint for validation and reproducible runs
 - `matanyone2/`: upstream model and inference implementation
 - `pretrained_models/`: downloaded checkpoints
 - `results/`: generated output artifacts
 
 ## Runtime flow
 
-1. `hugging_face/app.py` parses CLI arguments and discovers ffmpeg.
-2. SAM checkpoints and MatAnyone checkpoints are downloaded into `pretrained_models/` if missing.
-3. The Gradio UI collects point prompts and builds masks from the selected frame.
-4. `hugging_face/matanyone2_wrapper.py` runs the actual matting loop on frames.
-5. Outputs are rendered back to the UI and written into `results/` for video jobs.
+1. `hugging_face/app.py` or `matanyone2/cli.py` parses runtime flags and forwards execution into `matanyone2/demo_core.py`.
+2. ffmpeg and required checkpoints are resolved and downloaded into `pretrained_models/` if missing.
+3. Media is loaded into a shared session state with source size, working size, frame count, FPS, and optional audio metadata.
+4. SAM prompt points are converted into a template mask on the selected frame.
+5. The matting loop runs through the shared inference path and produces foreground/alpha outputs.
+6. Final outputs and debug artifacts are written into a dedicated run folder under `results/<input-name>_<timestamp>/`.
 
 ## Diagram reading notes
 
-- Both the Gradio app and `scripts/run_pipeline_check.py` feed into the same orchestration layer.
+- Both the Gradio app and the CLI feed into the same orchestration layer in `matanyone2/demo_core.py`.
 - SAM prompt processing and MatAnyone inference are separated so we can optimize them independently.
 - `pretrained_models/` is a shared runtime dependency for both SAM and MatAnyone checkpoints.
 - Public docs and README previews use tracked assets from `media/` instead of ignored files from `results/`.
+- Debugging is easier now because every run writes its own input snapshots, SAM previews, masks, output previews, and `metadata.json` into the run folder.
 
 ## Why docs live separately
 

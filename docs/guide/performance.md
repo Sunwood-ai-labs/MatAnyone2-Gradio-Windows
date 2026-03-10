@@ -25,6 +25,8 @@ Generated comparison artifacts live under:
 - `media/bookcat-balanced-preview.webp`
 - `media/bookcat-fast-preview.webp`
 
+Current ad-hoc runs created through the shared CLI go into a timestamped folder such as `results/bookcat_1773163828_6577592/`, which also includes debug artifacts and `metadata.json`. The historical benchmark folders above are still useful when you want stable paths for reporting or scripted comparisons.
+
 Representative visual comparison:
 
 - `results/bookcat-profile-exp/comparison_frame_120.png`

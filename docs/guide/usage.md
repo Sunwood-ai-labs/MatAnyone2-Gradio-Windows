@@ -51,3 +51,23 @@ You can validate the full `SAM -> MatAnyone -> save outputs` path without launch
 ```
 
 This script is what we used for the profile comparison documented in [`performance.md`](./performance.md). It writes mask previews, foreground outputs, alpha outputs, and timing-friendly artifacts under the chosen `--output_dir`.
+
+## Shared runtime
+
+The Gradio app and the CLI both run through the same shared runtime in `matanyone2/demo_core.py`. That means:
+
+- CLI runs are a valid way to debug the same core behavior used by the web UI
+- checkpoint loading, video/image preprocessing, SAM prompting, matting, and artifact writing stay aligned across both entrypoints
+- the compatibility wrapper `scripts/run_pipeline_check.py` and `python -m matanyone2.cli` should produce equivalent outputs when given the same flags
+
+## Run output structure
+
+Current runs create a dedicated folder like `results/bookcat_1773163828_6577592/` instead of writing files directly into the top-level `results/` directory.
+
+Inside that folder you will typically find:
+
+- final outputs such as `bookcat_foreground.mp4` and `bookcat_alpha.mp4`
+- the selected SAM preview and mask
+- input frame snapshots used for debugging
+- first and last matting output snapshots
+- `metadata.json` with the run configuration

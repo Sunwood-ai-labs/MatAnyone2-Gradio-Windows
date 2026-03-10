@@ -168,6 +168,12 @@ The runtime shape of the local app is documented as a tracked `draw.io` source p
   <img src="media/matanyone-architecture.svg" alt="MatAnyone local runtime architecture diagram" width="100%" />
 </p>
 
+The current implementation uses a shared runtime core in [`matanyone2/demo_core.py`](./matanyone2/demo_core.py) so that the Gradio app and the CLI follow the same processing path. The thin entrypoints are:
+
+- [`hugging_face/app.py`](./hugging_face/app.py) for the Gradio UI
+- [`matanyone2/cli.py`](./matanyone2/cli.py) for direct CLI execution
+- [`scripts/run_pipeline_check.py`](./scripts/run_pipeline_check.py) as a compatibility wrapper around the CLI
+
 ## 🖱️ Using the UI
 
 1. Open the `Video` or `Image` tab.
@@ -177,12 +183,20 @@ The runtime shape of the local app is documented as a tracked `draw.io` source p
 5. Run `Video Matting` or `Image Matting`.
 6. Collect rendered outputs from `results/`.
 
+Each run now writes to its own folder, for example `results/bookcat_1773163828_6577592/`. That folder includes:
+
+- final outputs such as `*_foreground.mp4`, `*_alpha.mp4`, `*_mask.png`, and `*_sam_preview.png`
+- debug artifacts such as `input_first_frame.png`, `input_selected_frame.png`, `sam_selected_preview.png`, `sam_selected_mask.png`, `matting_output_first_*`, and `matting_output_last_*`
+- `metadata.json` with the exact runtime settings used for the run
+
 ## 🗂️ Repository Layout
 
 | Path | Purpose |
 | --- | --- |
 | `hugging_face/app.py` | Gradio app entrypoint and local runtime glue |
 | `hugging_face/tools/` | UI helper utilities used by the demo |
+| `matanyone2/demo_core.py` | Shared runtime used by both Gradio and CLI |
+| `matanyone2/cli.py` | Direct CLI entrypoint for validation and reproducible runs |
 | `matanyone2/` | Upstream model and inference code |
 | `pretrained_models/` | Auto-downloaded checkpoints, ignored by git |
 | `results/` | Generated video outputs, ignored by git |

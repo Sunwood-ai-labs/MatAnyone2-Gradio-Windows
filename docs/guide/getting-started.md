@@ -44,6 +44,16 @@ uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --device c
 
 Then open `http://127.0.0.1:7860`.
 
+## Run the shared CLI
+
+The Gradio app and the validation path now share the same runtime core in `matanyone2/demo_core.py`. For quick local checks, you can run the same pipeline without opening the web UI:
+
+```powershell
+uv run --python .\.venv\Scripts\python.exe python -m matanyone2.cli --input .\media\bookcat.mp4 --device cpu --performance_profile fast --cpu_threads 8 --positive_point 280,180 --output_dir .\results
+```
+
+This creates a per-run folder such as `results/bookcat_1773163828_6577592/`.
+
 ## First-run downloads
 
 The app downloads these files automatically when needed:
@@ -54,6 +64,17 @@ The app downloads these files automatically when needed:
 - example videos and images under `hugging_face/test_sample/`
 
 Runtime checkpoints are stored in `pretrained_models/`.
+
+## Output layout
+
+Each run folder contains both final outputs and debug artifacts:
+
+- `*_foreground.mp4` / `*_alpha.mp4` or image outputs
+- `*_mask.png` and `*_sam_preview.png`
+- `input_first_frame.png`, `input_selected_frame.png`
+- `sam_selected_preview.png`, `sam_selected_mask.png`
+- `matting_output_first_*`, `matting_output_last_*`
+- `metadata.json`
 
 ## Local docs preview
 
