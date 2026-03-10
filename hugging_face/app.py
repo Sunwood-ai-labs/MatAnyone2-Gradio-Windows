@@ -3,6 +3,7 @@ import sys
 import json
 import time
 import glob
+import gc
 import shutil
 import psutil
 import ffmpeg
@@ -62,6 +63,7 @@ PERFORMANCE_PROFILES = {
 }
 
 PROFILE_CHOICES = ["auto", "balanced", "fast", "quality"]
+SAM_MODEL_CHOICES = ["auto", "vit_h", "vit_l", "vit_b"]
 
 def configure_ffmpeg_binary():
     candidates = []
@@ -106,7 +108,7 @@ else:
 def parse_augment():
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', type=str, default=None)
-    parser.add_argument('--sam_model_type', type=str, default="vit_h")
+    parser.add_argument('--sam_model_type', type=str, default="auto", choices=SAM_MODEL_CHOICES)
     parser.add_argument('--port', type=int, default=7860, help="Gradio server port")
     parser.add_argument('--server_name', type=str, default="127.0.0.1", help="Gradio bind address")
     parser.add_argument('--mask_save', default=False)
@@ -146,7 +148,7 @@ def resolve_performance_profile(profile_name, device_name):
     normalized = (profile_name or "auto").strip().lower()
     device_type = torch.device(device_name).type
     if normalized == "auto":
-        normalized = "balanced" if device_type == "cpu" else "quality"
+        normalized = "fast" if device_type == "cpu" else "quality"
     profile = dict(PERFORMANCE_PROFILES[normalized])
     profile["name"] = normalized
     profile["device_type"] = device_type
@@ -188,15 +190,46 @@ def build_inference_core(selected_model, performance_profile):
         runtime_cfg.max_internal_size = runtime_profile["max_internal_size"]
     return InferenceCore(selected_model, cfg=runtime_cfg, device=args.device), runtime_profile
 
+
+def resolve_sam_model_type(requested_model_type, device_name):
+    normalized = (requested_model_type or "auto").strip().lower()
+    if normalized != "auto":
+        return normalized
+    return "vit_b" if torch.device(device_name).type == "cpu" else "vit_h"
+
+
+def sam_image_key(state, frame_index):
+    return f"{state.get('user_name', 'session')}:{frame_index}"
+
 # SAM generator
 class MaskGenerator():
     def __init__(self, sam_checkpoint, args):
         self.args = args
-        self.samcontroler = SamControler(sam_checkpoint, args.sam_model_type, args.device)
+        self.sam_checkpoint = sam_checkpoint
+        self.sam_model_type = args.sam_model_type
+        self.device = args.device
+        self.samcontroler = None
+
+    def _ensure_loaded(self):
+        if self.samcontroler is None:
+            self.samcontroler = SamControler(self.sam_checkpoint, self.sam_model_type, self.device)
+        return self.samcontroler
+
+    def prepare_image(self, image: np.ndarray, image_key=None, force=False):
+        self._ensure_loaded().prepare_image(image, image_key=image_key, force=force)
        
     def first_frame_click(self, image: np.ndarray, points:np.ndarray, labels: np.ndarray, multimask=True):
-        mask, logit, painted_image = self.samcontroler.first_frame_click(image, points, labels, multimask)
+        mask, logit, painted_image = self._ensure_loaded().first_frame_click(image, points, labels, multimask)
         return mask, logit, painted_image
+
+    def release(self):
+        if self.samcontroler is None:
+            return
+        self.samcontroler.release()
+        self.samcontroler = None
+        gc.collect()
+        if torch.cuda.is_available() and torch.device(self.device).type == "cuda":
+            torch.cuda.empty_cache()
     
 # convert points input to prompt state
 def get_prompt(click_state, click_input):
@@ -251,8 +284,7 @@ def get_frames_from_image(image_input, image_state, performance_profile):
         image_size,
         runtime_profile["name"],
     )
-    model.samcontroler.sam_controler.reset_image() 
-    model.samcontroler.sam_controler.set_image(image_state["origin_images"][0])
+    model.prepare_image(image_state["origin_images"][0], sam_image_key(image_state, 0), force=True)
     return image_state, image_info, image_state["origin_images"][0], \
                         gr.update(visible=True, maximum=10, value=10), gr.update(visible=False, maximum=len(frames), value=len(frames)), \
                         gr.update(visible=True), gr.update(visible=True), \
@@ -348,8 +380,7 @@ def get_frames_from_video(video_input, video_state, performance_profile):
         image_size,
         runtime_profile["name"],
     )
-    model.samcontroler.sam_controler.reset_image() 
-    model.samcontroler.sam_controler.set_image(video_state["origin_images"][0])
+    model.prepare_image(video_state["origin_images"][0], sam_image_key(video_state, 0), force=True)
     return video_state, video_info, video_state["origin_images"][0], gr.update(visible=True, maximum=len(frames), value=1), gr.update(visible=False, maximum=len(frames), value=len(frames)), \
                         gr.update(visible=True), gr.update(visible=True), \
                         gr.update(visible=True), gr.update(visible=True),\
@@ -365,8 +396,11 @@ def select_video_template(image_selection_slider, video_state, interactive_state
     video_state["select_frame_number"] = image_selection_slider
 
     # once select a new template frame, set the image in sam
-    model.samcontroler.sam_controler.reset_image()
-    model.samcontroler.sam_controler.set_image(video_state["origin_images"][image_selection_slider])
+    model.prepare_image(
+        video_state["origin_images"][image_selection_slider],
+        sam_image_key(video_state, image_selection_slider),
+        force=True,
+    )
 
     return video_state["painted_images"][image_selection_slider], video_state, interactive_state
 
@@ -376,8 +410,11 @@ def select_image_template(image_selection_slider, video_state, interactive_state
     video_state["select_frame_number"] = image_selection_slider
 
     # once select a new template frame, set the image in sam
-    model.samcontroler.sam_controler.reset_image()
-    model.samcontroler.sam_controler.set_image(video_state["origin_images"][image_selection_slider])
+    model.prepare_image(
+        video_state["origin_images"][image_selection_slider],
+        sam_image_key(video_state, image_selection_slider),
+        force=True,
+    )
 
     return video_state["painted_images"][image_selection_slider], video_state, interactive_state
 
@@ -403,19 +440,22 @@ def sam_refine(video_state, point_prompt, click_state, interactive_state, evt:gr
         interactive_state["negative_click_times"] += 1
     
     # prompt for sam model
-    model.samcontroler.sam_controler.reset_image()
-    model.samcontroler.sam_controler.set_image(video_state["origin_images"][video_state["select_frame_number"]])
+    selected_frame = video_state["select_frame_number"]
+    model.prepare_image(
+        video_state["origin_images"][selected_frame],
+        sam_image_key(video_state, selected_frame),
+    )
     prompt = get_prompt(click_state=click_state, click_input=coordinate)
 
     mask, logit, painted_image = model.first_frame_click( 
-                                                      image=video_state["origin_images"][video_state["select_frame_number"]], 
+                                                      image=video_state["origin_images"][selected_frame], 
                                                       points=np.array(prompt["input_point"]),
                                                       labels=np.array(prompt["input_label"]),
                                                       multimask=prompt["multimask_output"],
                                                       )
-    video_state["masks"][video_state["select_frame_number"]] = mask
-    video_state["logits"][video_state["select_frame_number"]] = logit
-    video_state["painted_images"][video_state["select_frame_number"]] = painted_image
+    video_state["masks"][selected_frame] = mask
+    video_state["logits"][selected_frame] = logit
+    video_state["painted_images"][selected_frame] = painted_image
 
     return painted_image, video_state, interactive_state
 
@@ -452,6 +492,7 @@ def show_mask(video_state, interactive_state, mask_dropdown):
 
 # image matting
 def image_matting(video_state, interactive_state, mask_dropdown, erode_kernel_size, dilate_kernel_size, refine_iter, model_selection, performance_profile):
+    model.release()
     # Load model if not already loaded
     try:
         selected_model = load_model(model_selection)
@@ -502,6 +543,7 @@ def image_matting(video_state, interactive_state, mask_dropdown, erode_kernel_si
 
 # video matting
 def video_matting(video_state, interactive_state, mask_dropdown, erode_kernel_size, dilate_kernel_size, model_selection, performance_profile):
+    model.release()
     # Load model if not already loaded
     try:
         selected_model = load_model(model_selection)
@@ -657,6 +699,7 @@ def restart():
 args = parse_augment()
 set_default_device(args.device)
 configure_runtime(args.device, args.cpu_threads)
+args.sam_model_type = resolve_sam_model_type(args.sam_model_type, args.device)
 sam_checkpoint_url_dict = {
     'vit_h': "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth",
     'vit_l': "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_l_0b3195.pth",
@@ -665,6 +708,7 @@ sam_checkpoint_url_dict = {
 checkpoint_folder = os.path.join(REPO_DIR, 'pretrained_models')
 
 sam_checkpoint = load_file_from_url(sam_checkpoint_url_dict[args.sam_model_type], checkpoint_folder)
+print(f"Using SAM model type: {args.sam_model_type}")
 # initialize sams
 model = MaskGenerator(sam_checkpoint, args)
 
@@ -703,6 +747,10 @@ def load_model(display_name):
     
     if model_file in loaded_models:
         return loaded_models[model_file]
+
+    if torch.device(args.device).type == "cpu" and loaded_models:
+        loaded_models.clear()
+        gc.collect()
     
     if model_file not in model_paths:
         raise ValueError(f"Unknown model file: {model_file}")
@@ -947,7 +995,7 @@ with gr.Blocks(theme=gr.themes.Monochrome(), css=my_custom_css) as demo:
                         choices=PROFILE_CHOICES,
                         value=args.performance_profile,
                         label="Performance Profile",
-                        info="CPU auto uses balanced. Faster profiles reduce working FPS and resolution.",
+                        info="CPU auto uses fast. Faster profiles reduce working FPS and resolution.",
                         interactive=True)
                 with gr.Row():
                     with gr.Accordion('Model Settings (click to expand)', open=False):
@@ -1163,7 +1211,7 @@ with gr.Blocks(theme=gr.themes.Monochrome(), css=my_custom_css) as demo:
                         choices=PROFILE_CHOICES,
                         value=args.performance_profile,
                         label="Performance Profile",
-                        info="CPU auto uses balanced. Faster profiles reduce working resolution and warmup.",
+                        info="CPU auto uses fast. Faster profiles reduce working resolution and warmup.",
                         interactive=True)
                 with gr.Row():
                     with gr.Accordion('Model Settings (click to expand)', open=False):

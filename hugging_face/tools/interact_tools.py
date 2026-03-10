@@ -1,18 +1,20 @@
-import time
-import torch
-import cv2
-from PIL import Image, ImageDraw, ImageOps
-import numpy as np
-from typing import Union
-from segment_anything import sam_model_registry, SamPredictor, SamAutomaticMaskGenerator
-import matplotlib.pyplot as plt
-import PIL
-from .mask_painter import mask_painter as mask_painter2
-from .base_segmenter import BaseSegmenter
-from .painter import mask_painter, point_painter
 import os
-import requests
 import sys 
+import time
+from typing import Union
+
+import PIL
+import cv2
+import matplotlib.pyplot as plt
+import numpy as np
+import requests
+import torch
+from PIL import Image, ImageDraw, ImageOps
+from segment_anything import SamAutomaticMaskGenerator, SamPredictor, sam_model_registry
+
+from .base_segmenter import BaseSegmenter
+from .mask_painter import mask_painter as mask_painter2
+from .painter import mask_painter, point_painter
 
 
 mask_color = 3
@@ -33,6 +35,17 @@ class SamControler():
         initialize sam controler
         '''
         self.sam_controler = BaseSegmenter(SAM_checkpoint, model_type, device)
+        self.prepared_image_key = None
+
+    def prepare_image(self, image: np.ndarray, image_key=None, force=False):
+        if force or (not self.sam_controler.embedded) or self.prepared_image_key != image_key:
+            self.sam_controler.reset_image()
+            self.sam_controler.set_image(image)
+            self.prepared_image_key = image_key
+
+    def release(self):
+        self.sam_controler.reset_image()
+        self.prepared_image_key = None
         
     
     # def seg_again(self, image: np.ndarray):
@@ -50,7 +63,6 @@ class SamControler():
         return: mask, logit, painted image(mask+point)
         '''
         # self.sam_controler.set_image(image)
-        origal_image = self.sam_controler.orignal_image
         neg_flag = labels[-1]
         if neg_flag==1:
             #find neg
