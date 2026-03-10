@@ -77,10 +77,10 @@ CPU 実行:
 uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --device cpu --port 7860 --server_name 127.0.0.1
 ```
 
-CPU 環境でより軽快に動かしたい場合は、`balanced` プロファイルとスレッド数指定から試すのがおすすめです。
+CPU 環境でより軽快に動かしたい場合は、`fast` プロファイルとスレッド数指定から試すのがおすすめです。
 
 ```powershell
-uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --device cpu --performance_profile balanced --cpu_threads 8 --port 7860 --server_name 127.0.0.1
+uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --device cpu --performance_profile fast --cpu_threads 8 --sam_model_type vit_b --port 7860 --server_name 127.0.0.1
 ```
 
 起動後は `http://127.0.0.1:7860` を開いてください。
@@ -93,16 +93,17 @@ uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --device c
 uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --help
 ```
 
-`--performance_profile auto` は CPU では `balanced`、GPU では `quality` を自動選択します。Gradio UI 側からも、画像や動画を読み込む前に同じプロファイルを切り替えられます。
+`--performance_profile auto` は CPU では `fast`、GPU では `quality` を自動選択します。`--sam_model_type auto` も CPU では `vit_b`、GPU では `vit_h` を選びます。
 
 ## 📚 ドキュメント
 
 将来の拡張に備えて、構造化されたドキュメントを公開サイト [sunwood-ai-labs.github.io/MatAnyone2-Gradio-Windows](https://sunwood-ai-labs.github.io/MatAnyone2-Gradio-Windows/) とソースツリーの [`docs/`](./docs/index.md) に用意しています。
 
-- セットアップ: [`docs/guide/getting-started.md`](./docs/guide/getting-started.md)
-- 使い方: [`docs/guide/usage.md`](./docs/guide/usage.md)
-- アーキテクチャ: [`docs/guide/architecture.md`](./docs/guide/architecture.md)
-- トラブルシュート: [`docs/guide/troubleshooting.md`](./docs/guide/troubleshooting.md)
+- セットアップ: [`docs/ja/guide/getting-started.md`](./docs/ja/guide/getting-started.md)
+- 使い方: [`docs/ja/guide/usage.md`](./docs/ja/guide/usage.md)
+- パフォーマンス検証: [`docs/ja/guide/performance.md`](./docs/ja/guide/performance.md)
+- アーキテクチャ: [`docs/ja/guide/architecture.md`](./docs/ja/guide/architecture.md)
+- トラブルシュート: [`docs/ja/guide/troubleshooting.md`](./docs/ja/guide/troubleshooting.md)
 
 ローカルで docs サイトを確認する場合:
 
@@ -111,6 +112,18 @@ cd docs
 npm install
 npm run docs:dev
 ```
+
+## Performance Snapshot
+
+`media/bookcat.mp4` を使って、ローカル検証スクリプト [`scripts/run_pipeline_check.py`](./scripts/run_pipeline_check.py) から `SAM -> MatAnyone -> 動画出力` の全体パイプラインを計測しました。
+
+| Profile | CPU time | GPU time | GPU speedup vs CPU |
+| --- | ---: | ---: | ---: |
+| `quality` | `227.76s` | `72.84s` | `3.13x` |
+| `balanced` | `225.62s` | `78.72s` | `2.87x` |
+| `fast` | `211.33s` | `71.43s` | `2.96x` |
+
+比較結果の JSON は `results/bookcat-profile-exp-compare.json`、代表フレーム比較は `results/bookcat-profile-exp/comparison_frame_120.png` にあります。実験条件と `quality` 基準の差分は [`docs/ja/guide/performance.md`](./docs/ja/guide/performance.md) にまとめています。
 
 ## 🖱️ 使い方
 

@@ -34,6 +34,7 @@ export default defineConfig({
             items: [
               { text: "Getting Started", link: "/guide/getting-started" },
               { text: "Usage", link: "/guide/usage" },
+              { text: "Performance", link: "/guide/performance" },
               { text: "Architecture", link: "/guide/architecture" },
               { text: "Troubleshooting", link: "/guide/troubleshooting" },
             ],
@@ -58,6 +59,7 @@ export default defineConfig({
             items: [
               { text: "セットアップ", link: "/ja/guide/getting-started" },
               { text: "使い方", link: "/ja/guide/usage" },
+              { text: "パフォーマンス", link: "/ja/guide/performance" },
               { text: "アーキテクチャ", link: "/ja/guide/architecture" },
               { text: "トラブルシュート", link: "/ja/guide/troubleshooting" },
             ],

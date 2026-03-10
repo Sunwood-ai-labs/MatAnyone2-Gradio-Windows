@@ -39,3 +39,15 @@ Common flags:
 - `--port 7860`
 - `--server_name 127.0.0.1`
 - `--sam_model_type vit_h`
+- `--performance_profile auto|quality|balanced|fast`
+- `--cpu_threads 8`
+
+## CLI validation script
+
+You can validate the full `SAM -> MatAnyone -> save outputs` path without launching Gradio:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\run_pipeline_check.py --input media\bookcat.mp4 --device cpu --performance_profile balanced --cpu_threads 8 --sam_model_type vit_h --frame_limit 241 --positive_point 280,180 --negative_point 30,30 --negative_point 530,30 --output_dir results\bookcat-profile-exp\balanced
+```
+
+This script is what we used for the profile comparison documented in [`performance.md`](./performance.md). It writes mask previews, foreground outputs, alpha outputs, and timing-friendly artifacts under the chosen `--output_dir`.

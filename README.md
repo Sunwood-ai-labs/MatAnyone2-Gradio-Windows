@@ -77,10 +77,10 @@ Launch the app in CPU mode:
 uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --device cpu --port 7860 --server_name 127.0.0.1
 ```
 
-For smoother CPU inference, start with the balanced profile and an explicit thread budget:
+For smoother CPU inference, start with the fast profile and an explicit thread budget:
 
 ```powershell
-uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --device cpu --performance_profile balanced --cpu_threads 8 --port 7860 --server_name 127.0.0.1
+uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --device cpu --performance_profile fast --cpu_threads 8 --sam_model_type vit_b --port 7860 --server_name 127.0.0.1
 ```
 
 Then open `http://127.0.0.1:7860`.
@@ -93,7 +93,7 @@ uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --device c
 uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --help
 ```
 
-`--performance_profile auto` resolves to `balanced` on CPU and `quality` on GPU. You can also switch the same profile from the Gradio UI before loading an image or video.
+`--performance_profile auto` resolves to `fast` on CPU and `quality` on GPU. `--sam_model_type auto` also picks `vit_b` on CPU and `vit_h` on GPU. You can switch both from the CLI before launch.
 
 ## 📚 Documentation
 
@@ -101,6 +101,7 @@ Structured docs now live under the published site at [sunwood-ai-labs.github.io/
 
 - Getting started: [`docs/guide/getting-started.md`](./docs/guide/getting-started.md)
 - Usage guide: [`docs/guide/usage.md`](./docs/guide/usage.md)
+- Performance notes: [`docs/guide/performance.md`](./docs/guide/performance.md)
 - Architecture notes: [`docs/guide/architecture.md`](./docs/guide/architecture.md)
 - Troubleshooting: [`docs/guide/troubleshooting.md`](./docs/guide/troubleshooting.md)
 
@@ -111,6 +112,18 @@ cd docs
 npm install
 npm run docs:dev
 ```
+
+## Performance Snapshot
+
+We measured the full `SAM -> MatAnyone -> output video` pipeline on [`media/bookcat.mp4`](./media/bookcat.mp4) with the local validation script [`scripts/run_pipeline_check.py`](./scripts/run_pipeline_check.py).
+
+| Profile | CPU time | GPU time | GPU speedup vs CPU |
+| --- | ---: | ---: | ---: |
+| `quality` | `227.76s` | `72.84s` | `3.13x` |
+| `balanced` | `225.62s` | `78.72s` | `2.87x` |
+| `fast` | `211.33s` | `71.43s` | `2.96x` |
+
+The generated comparison report lives in `results/bookcat-profile-exp-compare.json`, and a representative frame comparison lives in `results/bookcat-profile-exp/comparison_frame_120.png`. See [`docs/guide/performance.md`](./docs/guide/performance.md) for experiment settings and quality deltas against `quality`.
 
 ## 🖱️ Using the UI
 
