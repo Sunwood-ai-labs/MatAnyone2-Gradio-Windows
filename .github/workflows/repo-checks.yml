@@ -28,7 +28,6 @@ jobs:
           test -f README.md
           test -f README.ja.md
           test -f media/matanyone-hero.svg
-          test -f media/matanyone-mark.svg
 
       - name: Compile Python sources
         run: python -m compileall hugging_face matanyone2

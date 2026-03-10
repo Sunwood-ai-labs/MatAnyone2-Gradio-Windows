@@ -1,21 +1,3 @@
----
-title: MatAnyone
-emoji: 🎬
-colorFrom: red
-colorTo: green
-sdk: gradio
-sdk_version: 4.31.0
-python_version: 3.10.13
-app_file: hugging_face/app.py
-pinned: false
-license: other
-short_description: Windows-friendly Gradio demo for MatAnyone and MatAnyone 2
----
-
-<p align="center">
-  <img src="media/matanyone-mark.svg" alt="MatAnyone mark" width="88" />
-</p>
-
 <p align="center">
   <img src="media/matanyone-hero.svg" alt="MatAnyone hero banner" width="100%" />
 </p>
@@ -36,7 +18,6 @@ Windows-friendly Gradio demo for `MatAnyone` and `MatAnyone 2`, adapted from the
 - Packages the Gradio demo entrypoint in [`hugging_face/app.py`](./hugging_face/app.py) for local Windows use.
 - Keeps both `MatAnyone` and `MatAnyone 2` checkpoints selectable from one UI.
 - Adds practical local runtime behavior such as ffmpeg discovery, `uv`-friendly setup, and ignored runtime artifacts.
-- Preserves the Hugging Face Space front matter in this README so the repo can still work as a Space-style app.
 
 ## 🎯 What You Can Do
 

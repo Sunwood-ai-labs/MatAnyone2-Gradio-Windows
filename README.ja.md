@@ -1,10 +1,6 @@
 # MatAnyone
 
 <p align="center">
-  <img src="media/matanyone-mark.svg" alt="MatAnyone mark" width="88" />
-</p>
-
-<p align="center">
   <img src="media/matanyone-hero.svg" alt="MatAnyone hero banner" width="100%" />
 </p>
 
@@ -22,7 +18,6 @@
 - [`hugging_face/app.py`](./hugging_face/app.py) を起点に、Windows 上でローカル実行しやすい形でデモを動かせます。
 - `MatAnyone` と `MatAnyone 2` の両方のチェックポイントを同じ UI から切り替えられます。
 - `uv` を前提にした導入手順、ffmpeg の自動検出、生成物の `.gitignore` 整備が入っています。
-- Hugging Face Space 用の front matter を維持しているため、Space 互換の README 構成も壊しません。
 
 ## 🎯 主なワークフロー
 
