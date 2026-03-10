@@ -1,0 +1,31 @@
+:root {
+  --vp-c-brand-1: #e8505b;
+  --vp-c-brand-2: #c93d4d;
+  --vp-c-brand-3: #101820;
+  --vp-c-brand-soft: rgba(232, 80, 91, 0.14);
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(135deg, #101820 0%, #e8505b 55%, #52b788 100%);
+  --vp-home-hero-image-background-image: radial-gradient(circle at 20% 20%, rgba(232, 80, 91, 0.24), transparent 40%),
+    radial-gradient(circle at 80% 20%, rgba(82, 183, 136, 0.28), transparent 34%),
+    radial-gradient(circle at 50% 80%, rgba(16, 24, 32, 0.18), transparent 48%);
+  --vp-home-hero-image-filter: blur(0px);
+}
+
+.VPHomeHero .image-container {
+  padding: 16px;
+  border-radius: 28px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(245, 241, 232, 0.88));
+  box-shadow: 0 24px 80px rgba(16, 24, 32, 0.12);
+}
+
+.VPFeature {
+  border: 1px solid rgba(16, 24, 32, 0.08);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(250, 247, 241, 0.96));
+}
+
+.vp-doc h1,
+.vp-doc h2,
+.vp-doc h3,
+.VPNavBarTitle .title {
+  letter-spacing: 0.01em;
+}

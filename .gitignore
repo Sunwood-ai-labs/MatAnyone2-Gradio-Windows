@@ -8,6 +8,9 @@ uv.lock
 .pytest_cache/
 .mypy_cache/
 .codex-run/
+docs/node_modules/
+docs/.vitepress/cache/
+docs/.vitepress/dist/
 
 .vscode/
 .idea/

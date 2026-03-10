@@ -8,6 +8,7 @@
 
 <p align="center">
   <a href="./README.md">English</a> |
+  <a href="./docs/index.md">Docs</a> |
   <a href="https://huggingface.co/spaces/PeiqingYang/MatAnyone">元の Space</a> |
   <a href="https://github.com/pq-yang/MatAnyone2">MatAnyone 2</a> |
   <a href="https://github.com/pq-yang/MatAnyone">MatAnyone</a>
@@ -83,6 +84,23 @@ uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --device c
 ```powershell
 uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --device cuda --port 7861 --server_name 127.0.0.1
 uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --help
+```
+
+## 📚 ドキュメント
+
+将来の拡張に備えて、構造化されたドキュメントを [`docs/`](./docs/index.md) に追加しています。
+
+- セットアップ: [`docs/guide/getting-started.md`](./docs/guide/getting-started.md)
+- 使い方: [`docs/guide/usage.md`](./docs/guide/usage.md)
+- アーキテクチャ: [`docs/guide/architecture.md`](./docs/guide/architecture.md)
+- トラブルシュート: [`docs/guide/troubleshooting.md`](./docs/guide/troubleshooting.md)
+
+ローカルで docs サイトを確認する場合:
+
+```powershell
+cd docs
+npm install
+npm run docs:dev
 ```
 
 ## 🖱️ 使い方
