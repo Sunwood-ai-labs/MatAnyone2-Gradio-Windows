@@ -20,10 +20,19 @@
 - `results/bookcat-profile-exp/`
 - `results/bookcat-profile-exp-gpu/`
 - `results/bookcat-profile-exp-compare.json`
+- `media/bookcat-quality-preview.webp`
+- `media/bookcat-balanced-preview.webp`
+- `media/bookcat-fast-preview.webp`
 
 見比べ用の代表フレーム:
 
 - `results/bookcat-profile-exp/comparison_frame_120.png`
+
+軽量プレビュー:
+
+| `quality` | `balanced` | `fast` |
+| --- | --- | --- |
+| <img src="/bookcat-quality-preview.webp" alt="Quality profile preview" width="180"> | <img src="/bookcat-balanced-preview.webp" alt="Balanced profile preview" width="180"> | <img src="/bookcat-fast-preview.webp" alt="Fast profile preview" width="180"> |
 
 ## 速度比較
 
@@ -64,3 +73,11 @@ GPU:
 ```powershell
 .\.venv\Scripts\python.exe scripts\run_pipeline_check.py --input media\bookcat.mp4 --device cuda --performance_profile balanced --sam_model_type vit_h --frame_limit 241 --positive_point 280,180 --negative_point 30,30 --negative_point 530,30 --output_dir results\bookcat-profile-exp-gpu\balanced
 ```
+
+Animated WebP 生成:
+
+```powershell
+uv run --project D:\Prj\video-background-remover video-background-remover D:\Prj\MatAnyone\results\bookcat-profile-exp\balanced\bookcat_foreground.mp4 D:\Prj\MatAnyone\media\bookcat-balanced-preview.webp --matanyone --alpha-video D:\Prj\MatAnyone\results\bookcat-profile-exp\balanced\bookcat_alpha.mp4 --animated webp --webp-fps 6 --max-frames 96 --size 280x280
+```
+
+`--size 280x280` が、元の `560x560` サンプルに対する半分サイズの後処理です。

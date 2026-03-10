@@ -125,6 +125,12 @@ We measured the full `SAM -> MatAnyone -> output video` pipeline on [`media/book
 
 The generated comparison report lives in `results/bookcat-profile-exp-compare.json`, and a representative frame comparison lives in `results/bookcat-profile-exp/comparison_frame_120.png`. See [`docs/guide/performance.md`](./docs/guide/performance.md) for experiment settings and quality deltas against `quality`.
 
+Compact animated previews are also available as half-resolution WebP files generated from the MatAnyone foreground+alpha pairs.
+
+| `quality` | `balanced` | `fast` |
+| --- | --- | --- |
+| <img src="media/bookcat-quality-preview.webp" alt="Quality profile preview" width="180" /> | <img src="media/bookcat-balanced-preview.webp" alt="Balanced profile preview" width="180" /> | <img src="media/bookcat-fast-preview.webp" alt="Fast profile preview" width="180" /> |
+
 ## 🖱️ Using the UI
 
 1. Open the `Video` or `Image` tab.
