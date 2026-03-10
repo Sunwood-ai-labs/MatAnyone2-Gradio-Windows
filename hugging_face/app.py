@@ -9,6 +9,7 @@ import ffmpeg
 import imageio
 import imageio_ffmpeg
 import argparse
+import warnings
 from PIL import Image
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -19,7 +20,6 @@ for path in (APP_DIR, REPO_DIR):
         sys.path.append(path)
 
 import cv2
-import torch
 import numpy as np
 import gradio as gr
  
@@ -32,8 +32,6 @@ from matanyone2_wrapper import matanyone2
 from matanyone2.utils.get_default_model import get_matanyone2_model
 from matanyone2.inference.inference_core import InferenceCore
 from hydra.core.global_hydra import GlobalHydra
-
-import warnings
 warnings.filterwarnings("ignore")
 
 def configure_ffmpeg_binary():
@@ -180,7 +178,7 @@ def get_frames_from_video(video_input, video_state):
         fps = cap.get(cv2.CAP_PROP_FPS)
         while cap.isOpened():
             ret, frame = cap.read()
-            if ret == True:
+            if ret:
                 current_memory_usage = psutil.virtual_memory().percent
                 frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
                 if current_memory_usage > 90:
@@ -538,7 +536,7 @@ def load_model(display_name):
     # Clear Hydra instance if already initialized (to allow loading different models)
     try:
         GlobalHydra.instance().clear()
-    except:
+    except Exception:
         pass  # If Hydra is not initialized, this is fine
     
     print(f"Loading model: {display_name} ({model_file})...")
