@@ -32,6 +32,8 @@ jobs:
 
       - name: Set up Pages
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - name: Install docs dependencies
         run: npm ci
