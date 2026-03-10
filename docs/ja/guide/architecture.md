@@ -1,32 +1,47 @@
 # アーキテクチャ
 
+![MatAnyone runtime architecture](/matanyone-architecture.svg)
+
+図のソース:
+
+- `media/matanyone-architecture.drawio`
+- `media/matanyone-architecture.svg`
+
 ## リポジトリ構成
 
-- `hugging_face/app.py`: Gradio の入口、重み読み込み、ffmpeg 検出、UI 配線
-- `hugging_face/matanyone2_wrapper.py`: 推論コアを呼ぶマッティング用ラッパー
-- `hugging_face/tools/`: クリック入力、マスク描画、ダウンロード補助、UI サポート
-- `matanyone2/`: upstream 由来のモデル・推論実装
-- `pretrained_models/`: ダウンロード済みの重み
-- `results/`: 生成結果
+- `hugging_face/app.py`: Gradio の起点、CLI 引数処理、ffmpeg 検出、モデル選択
+- `hugging_face/matanyone2_wrapper.py`: image / video の matting ループをまとめるラッパー
+- `hugging_face/tools/`: クリック入力、マスク生成、ダウンロード補助などの UI 周辺コード
+- `matanyone2/`: upstream 由来のモデル本体と推論実装
+- `pretrained_models/`: 実行時に取得されるチェックポイント
+- `results/`: 生成された出力や検証結果
 
-## 実行の流れ
+## 実行フロー
 
-1. `hugging_face/app.py` が CLI 引数を読み、ffmpeg を検出します。
-2. 必要であれば SAM と MatAnyone の重みを `pretrained_models/` にダウンロードします。
-3. Gradio UI で選択したフレームからポイント入力を受け、マスクを組み立てます。
-4. `hugging_face/matanyone2_wrapper.py` がフレーム列に対してマッティングを実行します。
-5. UI と `results/` に出力を書き戻します。
+1. `hugging_face/app.py` が CLI 引数を解釈し、ffmpeg を見つけます。
+2. 必要な SAM と MatAnyone のチェックポイントがなければ `pretrained_models/` に取得します。
+3. Gradio UI か `scripts/run_pipeline_check.py` が入力フレームと point prompt を渡します。
+4. `hugging_face/tools/interact_tools.py` が SAM ベースのマスクを作り、template mask を用意します。
+5. `hugging_face/matanyone2_wrapper.py` がフレーム列を処理し、`matanyone2/` の推論コアを呼び出します。
+6. 出力は UI プレビュー、動画ファイル、実験用の生成物として返されます。
 
-## docs を分ける理由
+## 図の見どころ
 
-このリポジトリは README 1 枚では足りなくなる前提で育てるため、`docs/` を次の情報の置き場にしています。
+- Gradio と CLI 検証スクリプトは、途中から同じ実行パスを通ります。
+- SAM のマスク生成段と MatAnyone の推論段を分けてあるので、別々に最適化しやすい構造です。
+- `pretrained_models/` は SAM と MatAnyone の両方から参照される共有のランタイム依存です。
+- README と docs に載せる画像は、無視される `results/` ではなく追跡される `media/` に置いています。
 
-- 導入ガイド
-- 構成メモ
-- 将来のモデル管理手順
+## docs を分けている理由
+
+このリポジトリは README 1 枚では収まらない説明が増えていく前提なので、`docs/` を次の情報の受け皿として使っています。
+
+- セットアップ手順
+- アーキテクチャ解説
+- モデル運用メモ
 - リリースノートや移行ガイド
-- 開発者向け説明
+- コントリビュータ向けの補足説明
 
 ## デプロイ
 
-docs は VitePress で build され、GitHub Actions の `Docs Pages` workflow から GitHub Pages に配信されます。
+docs は VitePress で build され、GitHub Actions の `Docs Pages` workflow から GitHub Pages へ公開されます。

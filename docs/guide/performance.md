@@ -20,6 +20,7 @@ Generated comparison artifacts live under:
 - `results/bookcat-profile-exp/`
 - `results/bookcat-profile-exp-gpu/`
 - `results/bookcat-profile-exp-compare.json`
+- `media/bookcat-comparison-frame-120.png`
 - `media/bookcat-quality-preview.webp`
 - `media/bookcat-balanced-preview.webp`
 - `media/bookcat-fast-preview.webp`
@@ -27,6 +28,8 @@ Generated comparison artifacts live under:
 Representative visual comparison:
 
 - `results/bookcat-profile-exp/comparison_frame_120.png`
+
+![Representative comparison frame](/bookcat-comparison-frame-120.png)
 
 Compact animated previews:
 

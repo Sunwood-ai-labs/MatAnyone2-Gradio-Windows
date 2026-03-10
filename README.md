@@ -125,11 +125,26 @@ We measured the full `SAM -> MatAnyone -> output video` pipeline on [`media/book
 
 The generated comparison report lives in `results/bookcat-profile-exp-compare.json`, and a representative frame comparison lives in `results/bookcat-profile-exp/comparison_frame_120.png`. See [`docs/guide/performance.md`](./docs/guide/performance.md) for experiment settings and quality deltas against `quality`.
 
+<p align="center">
+  <img src="media/bookcat-comparison-frame-120.png" alt="Representative comparison frame for quality, balanced, and fast profiles" width="820" />
+</p>
+
 Compact animated previews are also available as half-resolution WebP files generated from the MatAnyone foreground+alpha pairs.
 
 | `quality` | `balanced` | `fast` |
 | --- | --- | --- |
 | <img src="media/bookcat-quality-preview.webp" alt="Quality profile preview" width="180" /> | <img src="media/bookcat-balanced-preview.webp" alt="Balanced profile preview" width="180" /> | <img src="media/bookcat-fast-preview.webp" alt="Fast profile preview" width="180" /> |
+
+## 🧭 Runtime Architecture
+
+The runtime shape of the local app is documented as a tracked `draw.io` source plus an exported SVG.
+
+- Source: [`media/matanyone-architecture.drawio`](./media/matanyone-architecture.drawio)
+- SVG: [`media/matanyone-architecture.svg`](./media/matanyone-architecture.svg)
+
+<p align="center">
+  <img src="media/matanyone-architecture.svg" alt="MatAnyone local runtime architecture diagram" width="100%" />
+</p>
 
 ## 🖱️ Using the UI
 

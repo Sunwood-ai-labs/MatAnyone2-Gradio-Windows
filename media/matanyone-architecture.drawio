@@ -1,0 +1,99 @@
+<mxfile host="app.diagrams.net" modified="2026-03-11T02:35:00.000Z" agent="Codex" version="24.7.17">
+  <diagram id="matanyone-runtime" name="Runtime Flow">
+    <mxGraphModel dx="1440" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="MatAnyone Local Runtime Architecture" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=28;fontStyle=1;fontColor=#0F172A;" vertex="1" parent="1">
+          <mxGeometry x="40" y="30" width="540" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" value="Gradio UI and CLI validation both pass through the same SAM + MatAnyone pipeline." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=14;fontColor=#475569;" vertex="1" parent="1">
+          <mxGeometry x="40" y="68" width="760" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="entry" value="Entry Points&#xa;Gradio UI&#xa;scripts/run_pipeline_check.py" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#D97706;fontColor=#7C2D12;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="180" width="210" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="orchestrator" value="hugging_face/app.py&#xa;CLI args, ffmpeg discovery,&#xa;model selection, profile defaults" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#2563EB;fontColor=#1E3A8A;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="300" y="160" width="260" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="sam" value="Prompt + Mask Stage&#xa;hugging_face/tools/interact_tools.py&#xa;SAM embedding cache and template mask" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D1FAE5;strokeColor=#059669;fontColor=#065F46;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="640" y="100" width="280" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="checkpoints" value="pretrained_models/&#xa;SAM + MatAnyone checkpoints&#xa;downloaded on demand" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E8FF;strokeColor=#7C3AED;fontColor=#5B21B6;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="640" y="320" width="280" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="wrapper" value="matanyone2_wrapper.py&#xa;image/video orchestration,&#xa;streaming outputs, CPU-friendly settings" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0F2FE;strokeColor=#0284C7;fontColor=#0C4A6E;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="990" y="100" width="300" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="core" value="matanyone2/&#xa;InferenceCore, MemoryManager,&#xa;MatAnyone / MatAnyone 2 models" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FCE7F3;strokeColor=#DB2777;fontColor=#9D174D;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="990" y="320" width="300" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="outputs" value="Outputs&#xa;UI previews&#xa;MP4 / WebM / WebP&#xa;results/ artifacts" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E2E8F0;strokeColor=#475569;fontColor=#0F172A;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1330" y="190" width="170" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="notes" value="Performance experiments reuse the same runtime path, then publish tracked assets from media/." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF7ED;strokeColor=#EA580C;fontColor=#9A3412;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="300" y="340" width="260" height="96" as="geometry" />
+        </mxCell>
+        <mxCell id="sam_note" value="template mask" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECFDF5;strokeColor=none;fontColor=#047857;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="840" y="144" width="92" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="sam_ckpt_note" value="checkpoint load" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F3FF;strokeColor=none;fontColor=#6D28D9;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="690" y="268" width="120" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="core_ckpt_note" value="checkpoint load" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDF2F8;strokeColor=none;fontColor=#BE185D;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="930" y="352" width="120" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#475569;endArrow=block;endFill=1;" edge="1" parent="1" source="entry" target="orchestrator">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#059669;endArrow=block;endFill=1;" edge="1" parent="1" source="orchestrator" target="sam">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#7C3AED;endArrow=block;endFill=1;" edge="1" parent="1" source="checkpoints" target="sam">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="780" y="260" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#0284C7;endArrow=block;endFill=1;" edge="1" parent="1" source="orchestrator" target="wrapper">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="800" y="258" />
+              <mxPoint x="930" y="258" />
+              <mxPoint x="930" y="170" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#059669;endArrow=block;endFill=1;" edge="1" parent="1" source="sam" target="wrapper">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#7C3AED;endArrow=block;endFill=1;" edge="1" parent="1" source="checkpoints" target="core">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#0284C7;endArrow=block;endFill=1;" edge="1" parent="1" source="wrapper" target="core">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#475569;endArrow=block;endFill=1;" edge="1" parent="1" source="wrapper" target="outputs">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1310" y="170" />
+              <mxPoint x="1310" y="230" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#475569;endArrow=block;endFill=1;" edge="1" parent="1" source="core" target="outputs">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1310" y="380" />
+              <mxPoint x="1310" y="300" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#EA580C;endArrow=block;endFill=1;dashed=1;" edge="1" parent="1" source="notes" target="outputs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

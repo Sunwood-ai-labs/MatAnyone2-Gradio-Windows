@@ -1,5 +1,12 @@
 # Architecture
 
+![MatAnyone runtime architecture](/matanyone-architecture.svg)
+
+Diagram source files:
+
+- `media/matanyone-architecture.drawio`
+- `media/matanyone-architecture.svg`
+
 ## Repository layout
 
 - `hugging_face/app.py`: Gradio entrypoint, checkpoint loading, ffmpeg detection, UI wiring
@@ -16,6 +23,13 @@
 3. The Gradio UI collects point prompts and builds masks from the selected frame.
 4. `hugging_face/matanyone2_wrapper.py` runs the actual matting loop on frames.
 5. Outputs are rendered back to the UI and written into `results/` for video jobs.
+
+## Diagram reading notes
+
+- Both the Gradio app and `scripts/run_pipeline_check.py` feed into the same orchestration layer.
+- SAM prompt processing and MatAnyone inference are separated so we can optimize them independently.
+- `pretrained_models/` is a shared runtime dependency for both SAM and MatAnyone checkpoints.
+- Public docs and README previews use tracked assets from `media/` instead of ignored files from `results/`.
 
 ## Why docs live separately
 

@@ -125,11 +125,26 @@ npm run docs:dev
 
 比較結果の JSON は `results/bookcat-profile-exp-compare.json`、代表フレーム比較は `results/bookcat-profile-exp/comparison_frame_120.png` にあります。実験条件と `quality` 基準の差分は [`docs/ja/guide/performance.md`](./docs/ja/guide/performance.md) にまとめています。
 
+<p align="center">
+  <img src="media/bookcat-comparison-frame-120.png" alt="Representative comparison frame for quality, balanced, and fast profiles" width="820" />
+</p>
+
 軽量な確認用として、MatAnyone の foreground+alpha ペアから半分サイズで書き出した animated WebP も置いています。
 
 | `quality` | `balanced` | `fast` |
 | --- | --- | --- |
 | <img src="media/bookcat-quality-preview.webp" alt="Quality profile preview" width="180" /> | <img src="media/bookcat-balanced-preview.webp" alt="Balanced profile preview" width="180" /> | <img src="media/bookcat-fast-preview.webp" alt="Fast profile preview" width="180" /> |
+
+## 🧭 Runtime Architecture
+
+ローカルアプリの構成図は、追跡される `draw.io` ソースと SVG の両方を置いてあります。
+
+- Source: [`media/matanyone-architecture.drawio`](./media/matanyone-architecture.drawio)
+- SVG: [`media/matanyone-architecture.svg`](./media/matanyone-architecture.svg)
+
+<p align="center">
+  <img src="media/matanyone-architecture.svg" alt="MatAnyone local runtime architecture diagram" width="100%" />
+</p>
 
 ## 🖱️ 使い方
 
