@@ -8,7 +8,7 @@ Windows-friendly Gradio demo for `MatAnyone` and `MatAnyone 2`, adapted from the
 
 <p align="center">
   <a href="./README.ja.md">日本語</a> |
-  <a href="./docs/index.md">Docs</a> |
+  <a href="https://sunwood-ai-labs.github.io/MatAnyone2-Gradio-Windows/">Docs</a> |
   <a href="https://huggingface.co/spaces/PeiqingYang/MatAnyone">Original Space</a> |
   <a href="https://github.com/pq-yang/MatAnyone2">MatAnyone 2</a> |
   <a href="https://github.com/pq-yang/MatAnyone">MatAnyone</a>
@@ -88,7 +88,7 @@ uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --help
 
 ## 📚 Documentation
 
-Structured docs now live under [`docs/`](./docs/index.md) and are intended to grow with the project.
+Structured docs now live under the published site at [sunwood-ai-labs.github.io/MatAnyone2-Gradio-Windows](https://sunwood-ai-labs.github.io/MatAnyone2-Gradio-Windows/) and in the source tree under [`docs/`](./docs/index.md).
 
 - Getting started: [`docs/guide/getting-started.md`](./docs/guide/getting-started.md)
 - Usage guide: [`docs/guide/usage.md`](./docs/guide/usage.md)

@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="./README.md">English</a> |
-  <a href="./docs/index.md">Docs</a> |
+  <a href="https://sunwood-ai-labs.github.io/MatAnyone2-Gradio-Windows/">Docs</a> |
   <a href="https://huggingface.co/spaces/PeiqingYang/MatAnyone">元の Space</a> |
   <a href="https://github.com/pq-yang/MatAnyone2">MatAnyone 2</a> |
   <a href="https://github.com/pq-yang/MatAnyone">MatAnyone</a>
@@ -88,7 +88,7 @@ uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --help
 
 ## 📚 ドキュメント
 
-将来の拡張に備えて、構造化されたドキュメントを [`docs/`](./docs/index.md) に追加しています。
+将来の拡張に備えて、構造化されたドキュメントを公開サイト [sunwood-ai-labs.github.io/MatAnyone2-Gradio-Windows](https://sunwood-ai-labs.github.io/MatAnyone2-Gradio-Windows/) とソースツリーの [`docs/`](./docs/index.md) に用意しています。
 
 - セットアップ: [`docs/guide/getting-started.md`](./docs/guide/getting-started.md)
 - 使い方: [`docs/guide/usage.md`](./docs/guide/usage.md)
