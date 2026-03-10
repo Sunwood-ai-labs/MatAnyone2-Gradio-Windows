@@ -1,11 +1,11 @@
 # アーキテクチャ
 
-![MatAnyone runtime architecture](/matanyone-architecture.svg)
+![MatAnyone runtime architecture](/matanyone-architecture-ja.svg)
 
 図のソース:
 
-- `media/matanyone-architecture.drawio`
-- `media/matanyone-architecture.svg`
+- `media/matanyone-architecture-ja.drawio`
+- `media/matanyone-architecture-ja.svg`
 
 ## リポジトリ構成
 

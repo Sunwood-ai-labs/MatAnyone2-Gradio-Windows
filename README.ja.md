@@ -135,15 +135,15 @@ npm run docs:dev
 | --- | --- | --- |
 | <img src="media/bookcat-quality-preview.webp" alt="Quality profile preview" width="180" /> | <img src="media/bookcat-balanced-preview.webp" alt="Balanced profile preview" width="180" /> | <img src="media/bookcat-fast-preview.webp" alt="Fast profile preview" width="180" /> |
 
-## 🧭 Runtime Architecture
+## 🧭 ランタイムアーキテクチャ
 
 ローカルアプリの構成図は、追跡される `draw.io` ソースと SVG の両方を置いてあります。
 
-- Source: [`media/matanyone-architecture.drawio`](./media/matanyone-architecture.drawio)
-- SVG: [`media/matanyone-architecture.svg`](./media/matanyone-architecture.svg)
+- draw.io ソース: [`media/matanyone-architecture-ja.drawio`](./media/matanyone-architecture-ja.drawio)
+- SVG: [`media/matanyone-architecture-ja.svg`](./media/matanyone-architecture-ja.svg)
 
 <p align="center">
-  <img src="media/matanyone-architecture.svg" alt="MatAnyone local runtime architecture diagram" width="100%" />
+  <img src="media/matanyone-architecture-ja.svg" alt="MatAnyone ローカル実行アーキテクチャ図" width="100%" />
 </p>
 
 ## 🖱️ 使い方

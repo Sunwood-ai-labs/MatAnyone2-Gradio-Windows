@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1540" height="560" viewBox="0 0 1540 560" role="img" aria-labelledby="title desc">
+  <title id="title">MatAnyone ローカル実行アーキテクチャ</title>
+  <desc id="desc">Gradio と CLI から app.py に入り、SAM のマスク生成、MatAnyone ラッパー、推論コア、出力へ流れる構成図。</desc>
+  <defs>
+    <style>
+      .title { font: 700 28px "Segoe UI", "Aptos", sans-serif; fill: #0f172a; }
+      .subtitle { font: 14px "Segoe UI", "Aptos", sans-serif; fill: #475569; }
+      .label { font: 700 18px "Segoe UI", "Aptos", sans-serif; }
+      .body { font: 14px "Segoe UI", "Aptos", sans-serif; }
+      .note { font: 12px "Segoe UI", "Aptos", sans-serif; }
+      .arrow { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+    <marker id="arrowhead" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L12,6 L0,12 Z" fill="currentColor" />
+    </marker>
+  </defs>
+
+  <rect width="1540" height="560" rx="28" fill="#f8fafc" />
+  <text x="40" y="52" class="title">MatAnyone ローカル実行アーキテクチャ</text>
+  <text x="40" y="80" class="subtitle">Gradio UI と CLI 検証スクリプトは、同じ SAM + MatAnyone パイプラインを通ります。</text>
+
+  <g transform="translate(40 180)">
+    <rect width="210" height="120" rx="18" fill="#FEF3C7" stroke="#D97706" stroke-width="3" />
+    <text x="20" y="34" class="label" fill="#7C2D12">入力経路</text>
+    <text x="20" y="66" class="body" fill="#7C2D12">Gradio UI</text>
+    <text x="20" y="90" class="body" fill="#7C2D12">run_pipeline_check.py</text>
+  </g>
+
+  <g transform="translate(300 160)">
+    <rect width="260" height="140" rx="18" fill="#DBEAFE" stroke="#2563EB" stroke-width="3" />
+    <text x="20" y="34" class="label" fill="#1E3A8A">hugging_face/app.py</text>
+    <text x="20" y="66" class="body" fill="#1E3A8A">CLI 引数、ffmpeg 検出、</text>
+    <text x="20" y="90" class="body" fill="#1E3A8A">モデル選択、プロファイル既定値</text>
+  </g>
+
+  <g transform="translate(640 100)">
+    <rect width="280" height="140" rx="18" fill="#D1FAE5" stroke="#059669" stroke-width="3" />
+    <text x="20" y="34" class="label" fill="#065F46">プロンプトとマスク生成</text>
+    <text x="20" y="66" class="body" fill="#065F46">hugging_face/tools/interact_tools.py</text>
+    <text x="20" y="90" class="body" fill="#065F46">SAM 埋め込みキャッシュと template mask</text>
+  </g>
+
+  <g transform="translate(640 320)">
+    <rect width="280" height="120" rx="18" fill="#F3E8FF" stroke="#7C3AED" stroke-width="3" />
+    <text x="20" y="34" class="label" fill="#5B21B6">pretrained_models/</text>
+    <text x="20" y="62" class="body" fill="#5B21B6">SAM と MatAnyone の重み</text>
+    <text x="20" y="86" class="body" fill="#5B21B6">必要時にダウンロード</text>
+  </g>
+
+  <g transform="translate(990 100)">
+    <rect width="300" height="140" rx="18" fill="#E0F2FE" stroke="#0284C7" stroke-width="3" />
+    <text x="20" y="34" class="label" fill="#0C4A6E">matanyone2_wrapper.py</text>
+    <text x="20" y="66" class="body" fill="#0C4A6E">画像・動画の orchestration、</text>
+    <text x="20" y="90" class="body" fill="#0C4A6E">ストリーミング出力、CPU 向け設定</text>
+  </g>
+
+  <g transform="translate(990 320)">
+    <rect width="300" height="120" rx="18" fill="#FCE7F3" stroke="#DB2777" stroke-width="3" />
+    <text x="20" y="34" class="label" fill="#9D174D">matanyone2/</text>
+    <text x="20" y="62" class="body" fill="#9D174D">InferenceCore、MemoryManager、</text>
+    <text x="20" y="86" class="body" fill="#9D174D">MatAnyone / MatAnyone 2 本体</text>
+  </g>
+
+  <g transform="translate(1330 190)">
+    <rect width="170" height="150" rx="18" fill="#E2E8F0" stroke="#475569" stroke-width="3" />
+    <text x="20" y="34" class="label" fill="#0F172A">出力</text>
+    <text x="20" y="66" class="body" fill="#0F172A">UI プレビュー</text>
+    <text x="20" y="90" class="body" fill="#0F172A">MP4 / WebM / WebP</text>
+    <text x="20" y="112" class="body" fill="#0F172A">results/ の生成物</text>
+  </g>
+
+  <g transform="translate(300 340)">
+    <rect width="260" height="96" rx="18" fill="#FFF7ED" stroke="#EA580C" stroke-width="3" />
+    <text x="20" y="34" class="body" fill="#9A3412">性能検証は同じ実行経路を使い、</text>
+    <text x="20" y="58" class="body" fill="#9A3412">公開用の画像や動画だけを</text>
+    <text x="20" y="82" class="body" fill="#9A3412">media/ に追跡して残します。</text>
+  </g>
+
+  <path class="arrow" stroke="#475569" marker-end="url(#arrowhead)" d="M250 240 H300" />
+  <path class="arrow" stroke="#059669" marker-end="url(#arrowhead)" d="M560 210 H640" />
+  <path class="arrow" stroke="#0284C7" marker-end="url(#arrowhead)" d="M560 258 H800 V258 H930 V170 H990" />
+  <path class="arrow" stroke="#059669" marker-end="url(#arrowhead)" d="M920 170 H990" />
+  <path class="arrow" stroke="#7C3AED" marker-end="url(#arrowhead)" d="M780 320 V240" />
+  <path class="arrow" stroke="#7C3AED" marker-end="url(#arrowhead)" d="M920 380 H990" />
+  <path class="arrow" stroke="#0284C7" marker-end="url(#arrowhead)" d="M1140 240 V320" />
+  <path class="arrow" stroke="#475569" marker-end="url(#arrowhead)" d="M1290 170 H1310 V230 H1330" />
+  <path class="arrow" stroke="#475569" marker-end="url(#arrowhead)" d="M1290 380 H1310 V300 H1330" />
+  <path class="arrow" stroke="#EA580C" marker-end="url(#arrowhead)" stroke-dasharray="8 8" d="M560 388 H1330" />
+
+  <rect x="840" y="144" width="100" height="22" rx="11" fill="#ECFDF5" />
+  <text x="850" y="159" class="note" fill="#047857">template mask</text>
+
+  <rect x="685" y="268" width="130" height="22" rx="11" fill="#F5F3FF" />
+  <text x="697" y="283" class="note" fill="#6D28D9">重みの読み込み</text>
+
+  <rect x="930" y="352" width="130" height="22" rx="11" fill="#FDF2F8" />
+  <text x="942" y="367" class="note" fill="#BE185D">重みの読み込み</text>
+</svg>
