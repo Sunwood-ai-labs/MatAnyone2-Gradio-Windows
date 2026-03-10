@@ -1,0 +1,51 @@
+name: Repo Checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - "codex/**"
+
+jobs:
+  repo-checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Verify documentation assets
+        run: |
+          test -f README.md
+          test -f README.ja.md
+          test -f media/matanyone-hero.svg
+          test -f media/matanyone-mark.svg
+
+      - name: Compile Python sources
+        run: python -m compileall hugging_face matanyone2
+
+      - name: Lint maintained wrapper
+        run: uvx ruff check hugging_face/app.py
+
+  readme-links:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check README links
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: --no-progress --verbose README.md README.ja.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
