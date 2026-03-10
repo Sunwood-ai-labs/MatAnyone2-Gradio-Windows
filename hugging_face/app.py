@@ -11,6 +11,8 @@ import imageio_ffmpeg
 import argparse
 import warnings
 from PIL import Image
+import torch
+from omegaconf import OmegaConf, open_dict
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_DIR = os.path.dirname(APP_DIR)
@@ -31,8 +33,35 @@ from tools.download_util import load_file_from_url
 from matanyone2_wrapper import matanyone2
 from matanyone2.utils.get_default_model import get_matanyone2_model
 from matanyone2.inference.inference_core import InferenceCore
+from matanyone2.utils.device import set_default_device
 from hydra.core.global_hydra import GlobalHydra
 warnings.filterwarnings("ignore")
+
+PERFORMANCE_PROFILES = {
+    "quality": {
+        "video_target_fps": None,
+        "video_max_short_side": 1080,
+        "image_max_short_side": 1536,
+        "max_internal_size": -1,
+        "n_warmup": 10,
+    },
+    "balanced": {
+        "video_target_fps": 12,
+        "video_max_short_side": 720,
+        "image_max_short_side": 1024,
+        "max_internal_size": 768,
+        "n_warmup": 4,
+    },
+    "fast": {
+        "video_target_fps": 8,
+        "video_max_short_side": 640,
+        "image_max_short_side": 832,
+        "max_internal_size": 640,
+        "n_warmup": 2,
+    },
+}
+
+PROFILE_CHOICES = ["auto", "balanced", "fast", "quality"]
 
 def configure_ffmpeg_binary():
     candidates = []
@@ -81,12 +110,83 @@ def parse_augment():
     parser.add_argument('--port', type=int, default=7860, help="Gradio server port")
     parser.add_argument('--server_name', type=str, default="127.0.0.1", help="Gradio bind address")
     parser.add_argument('--mask_save', default=False)
+    parser.add_argument('--performance_profile', type=str, default="auto", choices=PROFILE_CHOICES, help="Runtime profile tuned for CPU/GPU inference")
+    parser.add_argument('--cpu_threads', type=int, default=None, help="Torch CPU thread count when running on CPU")
     args = parser.parse_args()
     
     if not args.device:
         args.device = str(get_device())
 
     return args 
+
+
+def configure_runtime(device_name, cpu_threads=None):
+    device = torch.device(device_name)
+    if hasattr(torch.backends, "mkldnn"):
+        torch.backends.mkldnn.enabled = True
+
+    if device.type != "cpu":
+        return
+
+    cpu_count = os.cpu_count() or 4
+    threads = cpu_threads if cpu_threads and cpu_threads > 0 else max(1, cpu_count - 1 if cpu_count > 4 else cpu_count)
+    torch.set_num_threads(threads)
+    if hasattr(torch, "set_num_interop_threads"):
+        try:
+            torch.set_num_interop_threads(max(1, min(4, threads)))
+        except RuntimeError:
+            pass
+    if hasattr(torch, "set_float32_matmul_precision"):
+        torch.set_float32_matmul_precision("high")
+    cv2.setNumThreads(max(1, min(4, threads)))
+    print(f"Configured CPU runtime with {threads} Torch threads.")
+
+
+def resolve_performance_profile(profile_name, device_name):
+    normalized = (profile_name or "auto").strip().lower()
+    device_type = torch.device(device_name).type
+    if normalized == "auto":
+        normalized = "balanced" if device_type == "cpu" else "quality"
+    profile = dict(PERFORMANCE_PROFILES[normalized])
+    profile["name"] = normalized
+    profile["device_type"] = device_type
+    return profile
+
+
+def maybe_resize_frame(frame, max_short_side):
+    if max_short_side is None or max_short_side <= 0:
+        return frame
+
+    height, width = frame.shape[:2]
+    short_side = min(height, width)
+    if short_side <= max_short_side:
+        return frame
+
+    scale = max_short_side / float(short_side)
+    new_width = max(1, int(round(width * scale)))
+    new_height = max(1, int(round(height * scale)))
+    return cv2.resize(frame, (new_width, new_height), interpolation=cv2.INTER_AREA)
+
+
+def resize_output_frame(frame, target_size, interpolation=cv2.INTER_LINEAR):
+    if target_size is None:
+        return frame
+
+    target_h, target_w = target_size
+    if frame.shape[0] == target_h and frame.shape[1] == target_w:
+        return frame
+    resized = cv2.resize(frame, (target_w, target_h), interpolation=interpolation)
+    if frame.ndim == 3 and frame.shape[2] == 1 and resized.ndim == 2:
+        resized = resized[:, :, None]
+    return resized
+
+
+def build_inference_core(selected_model, performance_profile):
+    runtime_profile = resolve_performance_profile(performance_profile, args.device)
+    runtime_cfg = OmegaConf.create(OmegaConf.to_container(selected_model.cfg, resolve=True))
+    with open_dict(runtime_cfg):
+        runtime_cfg.max_internal_size = runtime_profile["max_internal_size"]
+    return InferenceCore(selected_model, cfg=runtime_cfg, device=args.device), runtime_profile
 
 # SAM generator
 class MaskGenerator():
@@ -116,7 +216,7 @@ def get_prompt(click_state, click_input):
     }
     return prompt
 
-def get_frames_from_image(image_input, image_state):
+def get_frames_from_image(image_input, image_state, performance_profile):
     """
     Args:
         video_path:str
@@ -125,8 +225,11 @@ def get_frames_from_image(image_input, image_state):
         [[0:nearest_frame], [nearest_frame:], nearest_frame]
     """
 
+    runtime_profile = resolve_performance_profile(performance_profile, args.device)
     user_name = time.time()
-    frames = [image_input] * 2  # hardcode: mimic a video with 2 frames
+    source_size = (image_input.shape[0], image_input.shape[1])
+    working_image = maybe_resize_frame(image_input, runtime_profile["image_max_short_side"])
+    frames = [working_image] * 2  # hardcode: mimic a video with 2 frames
     image_size = (frames[0].shape[0],frames[0].shape[1]) 
     # initialize video_state
     image_state = {
@@ -137,9 +240,17 @@ def get_frames_from_image(image_input, image_state):
         "masks": [np.zeros((frames[0].shape[0],frames[0].shape[1]), np.uint8)]*len(frames),
         "logits": [None]*len(frames),
         "select_frame_number": 0,
-        "fps": None
+        "fps": None,
+        "source_size": source_size,
+        "working_size": image_size,
+        "performance_profile": runtime_profile["name"],
         }
-    image_info = "Image Name: N/A,\nFPS: N/A,\nTotal Frames: {},\nImage Size:{}".format(len(frames), image_size)
+    image_info = "Image Name: N/A,\nFPS: N/A,\nTotal Frames: {},\nSource Size:{},\nWorking Size:{},\nProfile:{}".format(
+        len(frames),
+        source_size,
+        image_size,
+        runtime_profile["name"],
+    )
     model.samcontroler.sam_controler.reset_image() 
     model.samcontroler.sam_controler.set_image(image_state["origin_images"][0])
     return image_state, image_info, image_state["origin_images"][0], \
@@ -152,7 +263,7 @@ def get_frames_from_image(image_input, image_state):
                         gr.update(visible=True)
 
 # extract frames from upload video
-def get_frames_from_video(video_input, video_state):
+def get_frames_from_video(video_input, video_state, performance_profile):
     """
     Args:
         video_path:str
@@ -160,13 +271,16 @@ def get_frames_from_video(video_input, video_state):
     Return 
         [[0:nearest_frame], [nearest_frame:], nearest_frame]
     """
+    runtime_profile = resolve_performance_profile(performance_profile, args.device)
     video_path = video_input
     frames = []
     user_name = time.time()
+    source_size = None
 
     # extract Audio
     try:
-        audio_path = video_input.replace(".mp4", "_audio.wav")
+        video_root, _ = os.path.splitext(video_input)
+        audio_path = f"{video_root}_audio.wav"
         ffmpeg.input(video_path).output(audio_path, format='wav', acodec='pcm_s16le', ac=2, ar='44100').run(overwrite_output=True, quiet=True)
     except Exception as e:
         print(f"Audio extraction error: {str(e)}")
@@ -175,29 +289,38 @@ def get_frames_from_video(video_input, video_state):
     # extract frames
     try:
         cap = cv2.VideoCapture(video_path)
-        fps = cap.get(cv2.CAP_PROP_FPS)
+        source_fps = cap.get(cv2.CAP_PROP_FPS)
+        if not source_fps or source_fps <= 0:
+            source_fps = 30.0
+        frame_stride = 1
+        target_fps = runtime_profile["video_target_fps"]
+        if target_fps:
+            frame_stride = max(1, int(round(source_fps / target_fps)))
+        fps = source_fps / frame_stride
+        frame_index = 0
         while cap.isOpened():
             ret, frame = cap.read()
             if ret:
+                if source_size is None:
+                    source_size = (frame.shape[0], frame.shape[1])
+                if frame_index % frame_stride != 0:
+                    frame_index += 1
+                    continue
                 current_memory_usage = psutil.virtual_memory().percent
-                frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                frames.append(maybe_resize_frame(rgb_frame, runtime_profile["video_max_short_side"]))
                 if current_memory_usage > 90:
                     break
+                frame_index += 1
             else:
                 break
+        cap.release()
     except (OSError, TypeError, ValueError, KeyError, SyntaxError) as e:
         print("read_frame_source:{} error. {}\n".format(video_path, str(e)))
-    image_size = (frames[0].shape[0],frames[0].shape[1]) 
+    if not frames:
+        raise ValueError("No frames could be extracted from the selected video.")
 
-    # [remove for local demo] resize if resolution too big
-    if image_size[0]>=1080 and image_size[0]>=1080:
-        scale = 1080 / min(image_size)
-        new_w = int(image_size[1] * scale)
-        new_h = int(image_size[0] * scale)
-        # update frames
-        frames = [cv2.resize(f, (new_w, new_h), interpolation=cv2.INTER_AREA) for f in frames]
-        # update image_size
-        image_size = (frames[0].shape[0],frames[0].shape[1]) 
+    image_size = (frames[0].shape[0],frames[0].shape[1]) 
 
     # initialize video_state
     video_state = {
@@ -209,9 +332,22 @@ def get_frames_from_video(video_input, video_state):
         "logits": [None]*len(frames),
         "select_frame_number": 0,
         "fps": fps,
-        "audio": audio_path
+        "audio": audio_path,
+        "source_fps": source_fps,
+        "frame_stride": frame_stride,
+        "source_size": source_size or image_size,
+        "working_size": image_size,
+        "performance_profile": runtime_profile["name"],
         }
-    video_info = "Video Name: {},\nFPS: {},\nTotal Frames: {},\nImage Size:{}".format(video_state["video_name"], round(video_state["fps"], 0), len(frames), image_size)
+    video_info = "Video Name: {},\nSource FPS: {},\nProcessing FPS: {},\nTotal Frames: {},\nSource Size:{},\nWorking Size:{},\nProfile:{}".format(
+        video_state["video_name"],
+        round(video_state["source_fps"], 1),
+        round(video_state["fps"], 1),
+        len(frames),
+        video_state["source_size"],
+        image_size,
+        runtime_profile["name"],
+    )
     model.samcontroler.sam_controler.reset_image() 
     model.samcontroler.sam_controler.set_image(video_state["origin_images"][0])
     return video_state, video_info, video_state["origin_images"][0], gr.update(visible=True, maximum=len(frames), value=1), gr.update(visible=False, maximum=len(frames), value=len(frames)), \
@@ -315,7 +451,7 @@ def show_mask(video_state, interactive_state, mask_dropdown):
         return select_frame
 
 # image matting
-def image_matting(video_state, interactive_state, mask_dropdown, erode_kernel_size, dilate_kernel_size, refine_iter, model_selection):
+def image_matting(video_state, interactive_state, mask_dropdown, erode_kernel_size, dilate_kernel_size, refine_iter, model_selection, performance_profile):
     # Load model if not already loaded
     try:
         selected_model = load_model(model_selection)
@@ -326,7 +462,7 @@ def image_matting(video_state, interactive_state, mask_dropdown, erode_kernel_si
             selected_model = load_model(available_models[0])
         else:
             raise ValueError("No models are available! Please check if the model files exist.")
-    matanyone_processor = InferenceCore(selected_model, cfg=selected_model.cfg)
+    matanyone_processor, runtime_profile = build_inference_core(selected_model, performance_profile)
     if interactive_state["track_end_number"]:
         following_frames = video_state["origin_images"][video_state["select_frame_number"]:interactive_state["track_end_number"]]
     else:
@@ -347,14 +483,25 @@ def image_matting(video_state, interactive_state, mask_dropdown, erode_kernel_si
     # operation error
     if len(np.unique(template_mask))==1:
         template_mask[0][0]=1
-    foreground, alpha = matanyone2(matanyone_processor, following_frames, template_mask*255, r_erode=erode_kernel_size, r_dilate=dilate_kernel_size, n_warmup=refine_iter)
-    foreground_output = Image.fromarray(foreground[-1])
-    alpha_output = Image.fromarray(alpha[-1][:,:,0])
+    n_warmup = min(int(refine_iter), runtime_profile["n_warmup"]) if runtime_profile["device_type"] == "cpu" else int(refine_iter)
+    foreground, alpha = matanyone2(
+        matanyone_processor,
+        following_frames,
+        template_mask * 255,
+        r_erode=erode_kernel_size,
+        r_dilate=dilate_kernel_size,
+        n_warmup=n_warmup,
+    )
+    target_size = video_state.get("source_size")
+    foreground_frame = resize_output_frame(foreground[-1], target_size, interpolation=cv2.INTER_LINEAR)
+    alpha_frame = resize_output_frame(alpha[-1], target_size, interpolation=cv2.INTER_LINEAR)
+    foreground_output = Image.fromarray(foreground_frame)
+    alpha_output = Image.fromarray(alpha_frame[:, :, 0])
 
     return foreground_output, alpha_output
 
 # video matting
-def video_matting(video_state, interactive_state, mask_dropdown, erode_kernel_size, dilate_kernel_size, model_selection):
+def video_matting(video_state, interactive_state, mask_dropdown, erode_kernel_size, dilate_kernel_size, model_selection, performance_profile):
     # Load model if not already loaded
     try:
         selected_model = load_model(model_selection)
@@ -365,7 +512,7 @@ def video_matting(video_state, interactive_state, mask_dropdown, erode_kernel_si
             selected_model = load_model(available_models[0])
         else:
             raise ValueError("No models are available! Please check if the model files exist.")
-    matanyone_processor = InferenceCore(selected_model, cfg=selected_model.cfg)
+    matanyone_processor, runtime_profile = build_inference_core(selected_model, performance_profile)
     if interactive_state["track_end_number"]:
         following_frames = video_state["origin_images"][video_state["select_frame_number"]:interactive_state["track_end_number"]]
     else:
@@ -389,10 +536,31 @@ def video_matting(video_state, interactive_state, mask_dropdown, erode_kernel_si
     # operation error
     if len(np.unique(template_mask))==1:
         template_mask[0][0]=1
-    foreground, alpha = matanyone2(matanyone_processor, following_frames, template_mask*255, r_erode=erode_kernel_size, r_dilate=dilate_kernel_size)
+    foreground, alpha = matanyone2(
+        matanyone_processor,
+        following_frames,
+        template_mask * 255,
+        r_erode=erode_kernel_size,
+        r_dilate=dilate_kernel_size,
+        n_warmup=runtime_profile["n_warmup"],
+    )
 
-    foreground_output = generate_video_from_frames(foreground, output_path="./results/{}_fg.mp4".format(video_state["video_name"]), fps=fps, audio_path=audio_path) # import video_input to name the output video
-    alpha_output = generate_video_from_frames(alpha, output_path="./results/{}_alpha.mp4".format(video_state["video_name"]), fps=fps, gray2rgb=True, audio_path=audio_path) # import video_input to name the output video
+    target_size = video_state.get("source_size")
+    foreground_output = generate_video_from_frames(
+        foreground,
+        output_path="./results/{}_fg.mp4".format(video_state["video_name"]),
+        fps=fps,
+        audio_path=audio_path,
+        target_size=target_size,
+    )
+    alpha_output = generate_video_from_frames(
+        alpha,
+        output_path="./results/{}_alpha.mp4".format(video_state["video_name"]),
+        fps=fps,
+        gray2rgb=True,
+        audio_path=audio_path,
+        target_size=target_size,
+    )
     
     return foreground_output, alpha_output
 
@@ -413,35 +581,37 @@ def add_audio_to_video(video_path, audio_path, output_path):
         return None
 
 
-def generate_video_from_frames(frames, output_path, fps=30, gray2rgb=False, audio_path=""):
-    frames = np.asarray(frames)
-
-    if gray2rgb:
-        frames = np.repeat(frames, 3, axis=3)
-
-    _, h, w, _ = frames.shape
-    h = h // 2 * 2
-    w = w // 2 * 2
-
-    if frames.shape[1] != h or frames.shape[2] != w:
-        frames = np.asarray([
-            cv2.resize(frame, (w, h), interpolation=cv2.INTER_LINEAR)
-            for frame in frames
-        ])
-
+def generate_video_from_frames(frames, output_path, fps=30, gray2rgb=False, audio_path="", target_size=None):
     if not os.path.exists(os.path.dirname(output_path)):
         os.makedirs(os.path.dirname(output_path))
 
     video_temp_path = output_path.replace(".mp4", "_temp.mp4")
-
-    imageio.mimwrite(
+    writer = imageio.get_writer(
         video_temp_path,
-        frames,
         fps=fps,
         quality=7,
         codec="libx264",
-        macro_block_size=1
+        macro_block_size=1,
     )
+
+    try:
+        for frame in frames:
+            frame_np = np.asarray(frame)
+            if frame_np.ndim == 2:
+                frame_np = frame_np[:, :, None]
+            if gray2rgb and frame_np.shape[2] == 1:
+                frame_np = np.repeat(frame_np, 3, axis=2)
+            frame_np = resize_output_frame(frame_np, target_size, interpolation=cv2.INTER_LINEAR)
+
+            height, width = frame_np.shape[:2]
+            even_height = height // 2 * 2
+            even_width = width // 2 * 2
+            if height != even_height or width != even_width:
+                frame_np = cv2.resize(frame_np, (even_width, even_height), interpolation=cv2.INTER_LINEAR)
+
+            writer.append_data(frame_np)
+    finally:
+        writer.close()
 
     if audio_path != "" and os.path.exists(audio_path):
         output_path = add_audio_to_video(video_temp_path, audio_path, output_path)
@@ -460,7 +630,13 @@ def restart():
             "inpaint_masks": None,
             "logits": None,
             "select_frame_number": 0,
-            "fps": 30
+            "fps": 30,
+            "source_fps": 30,
+            "frame_stride": 1,
+            "source_size": None,
+            "working_size": None,
+            "performance_profile": args.performance_profile,
+            "audio": "",
         }, {
             "inference_times": 0,
             "negative_click_times" : 0,
@@ -479,6 +655,8 @@ def restart():
 
 # args, defined in track_anything.py
 args = parse_augment()
+set_default_device(args.device)
+configure_runtime(args.device, args.cpu_threads)
 sam_checkpoint_url_dict = {
     'vit_h': "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth",
     'vit_l': "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_l_0b3195.pth",
@@ -749,6 +927,11 @@ with gr.Blocks(theme=gr.themes.Monochrome(), css=my_custom_css) as demo:
                 "select_frame_number": 0,
                 "fps": 30,
                 "audio": "",
+                "source_fps": 30,
+                "frame_stride": 1,
+                "source_size": None,
+                "working_size": None,
+                "performance_profile": args.performance_profile,
                 }
             )
 
@@ -759,6 +942,12 @@ with gr.Blocks(theme=gr.themes.Monochrome(), css=my_custom_css) as demo:
                         value=default_model,
                         label="Model Selection",
                         info="Choose the model to use for matting",
+                        interactive=True)
+                    video_performance_profile = gr.Radio(
+                        choices=PROFILE_CHOICES,
+                        value=args.performance_profile,
+                        label="Performance Profile",
+                        info="CPU auto uses balanced. Faster profiles reduce working FPS and resolution.",
                         interactive=True)
                 with gr.Row():
                     with gr.Accordion('Model Settings (click to expand)', open=False):
@@ -831,7 +1020,7 @@ with gr.Blocks(theme=gr.themes.Monochrome(), css=my_custom_css) as demo:
             extract_frames_button.click(
                 fn=get_frames_from_video,
                 inputs=[
-                    video_input, video_state
+                    video_input, video_state, video_performance_profile
                 ],
                 outputs=[video_state, video_info, template_frame,
                         image_selection_slider, track_pause_number_slider, point_prompt, clear_button_click, add_mask_button, matting_button, template_frame,
@@ -869,7 +1058,7 @@ with gr.Blocks(theme=gr.themes.Monochrome(), css=my_custom_css) as demo:
             # video matting
             matting_button.click(
                 fn=video_matting,
-                inputs=[video_state, interactive_state, mask_dropdown, erode_kernel_size, dilate_kernel_size, model_selection],
+                inputs=[video_state, interactive_state, mask_dropdown, erode_kernel_size, dilate_kernel_size, model_selection, video_performance_profile],
                 outputs=[foreground_video_output, alpha_video_output]
             )
 
@@ -952,7 +1141,13 @@ with gr.Blocks(theme=gr.themes.Monochrome(), css=my_custom_css) as demo:
                 "inpaint_masks": None,
                 "logits": None,
                 "select_frame_number": 0,
-                "fps": 30
+                "fps": 30,
+                "source_fps": 30,
+                "frame_stride": 1,
+                "source_size": None,
+                "working_size": None,
+                "performance_profile": args.performance_profile,
+                "audio": "",
                 }
             )
 
@@ -963,6 +1158,12 @@ with gr.Blocks(theme=gr.themes.Monochrome(), css=my_custom_css) as demo:
                         value=default_model,
                         label="Model Selection",
                         info="Choose the model to use for matting",
+                        interactive=True)
+                    image_performance_profile = gr.Radio(
+                        choices=PROFILE_CHOICES,
+                        value=args.performance_profile,
+                        label="Performance Profile",
+                        info="CPU auto uses balanced. Faster profiles reduce working resolution and warmup.",
                         interactive=True)
                 with gr.Row():
                     with gr.Accordion('Model Settings (click to expand)', open=False):
@@ -1034,7 +1235,7 @@ with gr.Blocks(theme=gr.themes.Monochrome(), css=my_custom_css) as demo:
             extract_frames_button.click(
                 fn=get_frames_from_image,
                 inputs=[
-                    image_input, image_state
+                    image_input, image_state, image_performance_profile
                 ],
                 outputs=[image_state, image_info, template_frame,
                         image_selection_slider, track_pause_number_slider,point_prompt, clear_button_click, add_mask_button, matting_button, template_frame,
@@ -1072,7 +1273,7 @@ with gr.Blocks(theme=gr.themes.Monochrome(), css=my_custom_css) as demo:
             # image matting
             matting_button.click(
                 fn=image_matting,
-                inputs=[image_state, interactive_state, mask_dropdown, erode_kernel_size, dilate_kernel_size, image_selection_slider, model_selection],
+                inputs=[image_state, interactive_state, mask_dropdown, erode_kernel_size, dilate_kernel_size, image_selection_slider, model_selection, image_performance_profile],
                 outputs=[foreground_image_output, alpha_image_output]
             )
 

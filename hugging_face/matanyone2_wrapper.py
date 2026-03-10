@@ -1,10 +1,10 @@
 
-import tqdm
-import torch
-from torchvision.transforms.functional import to_tensor
 import numpy as np
 import random
 import cv2
+import torch
+import tqdm
+from torchvision.transforms.functional import to_tensor
 from matanyone2.utils.device import get_default_device, safe_autocast_decorator
 
 device = get_default_device()
@@ -45,14 +45,15 @@ def matanyone2(processor, frames_np, mask, r_erode=0, r_dilate=0, n_warmup=10):
     if r_erode > 0:
         mask = gen_erosion(mask, r_erode, r_erode)
 
-    mask = torch.from_numpy(mask).to(device)
+    runtime_device = torch.device(getattr(processor, "device", device))
+    mask = torch.from_numpy(mask).to(runtime_device)
 
     frames_np = [frames_np[0]]* n_warmup + frames_np
 
     frames = []
     phas = []
     for ti, frame_single in tqdm.tqdm(enumerate(frames_np)):
-        image = to_tensor(frame_single).float().to(device)
+        image = to_tensor(frame_single).float().to(runtime_device)
 
         if ti == 0:
             output_prob = processor.step(image, mask, objects=objects)      # encode given mask

@@ -77,14 +77,23 @@ CPU 実行:
 uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --device cpu --port 7860 --server_name 127.0.0.1
 ```
 
+CPU 環境でより軽快に動かしたい場合は、`balanced` プロファイルとスレッド数指定から試すのがおすすめです。
+
+```powershell
+uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --device cpu --performance_profile balanced --cpu_threads 8 --port 7860 --server_name 127.0.0.1
+```
+
 起動後は `http://127.0.0.1:7860` を開いてください。
 
 補助コマンド:
 
 ```powershell
 uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --device cuda --port 7861 --server_name 127.0.0.1
+uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --device cpu --performance_profile fast --port 7860 --server_name 127.0.0.1
 uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --help
 ```
+
+`--performance_profile auto` は CPU では `balanced`、GPU では `quality` を自動選択します。Gradio UI 側からも、画像や動画を読み込む前に同じプロファイルを切り替えられます。
 
 ## 📚 ドキュメント
 

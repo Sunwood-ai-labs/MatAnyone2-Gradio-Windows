@@ -77,14 +77,23 @@ Launch the app in CPU mode:
 uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --device cpu --port 7860 --server_name 127.0.0.1
 ```
 
+For smoother CPU inference, start with the balanced profile and an explicit thread budget:
+
+```powershell
+uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --device cpu --performance_profile balanced --cpu_threads 8 --port 7860 --server_name 127.0.0.1
+```
+
 Then open `http://127.0.0.1:7860`.
 
 Useful variants:
 
 ```powershell
 uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --device cuda --port 7861 --server_name 127.0.0.1
+uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --device cpu --performance_profile fast --port 7860 --server_name 127.0.0.1
 uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --help
 ```
+
+`--performance_profile auto` resolves to `balanced` on CPU and `quality` on GPU. You can also switch the same profile from the Gradio UI before loading an image or video.
 
 ## 📚 Documentation
 
