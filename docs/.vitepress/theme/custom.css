@@ -11,6 +11,49 @@
   --vp-home-hero-image-filter: blur(0px);
 }
 
+.VPHomeHero .main {
+  position: relative;
+  isolation: isolate;
+  padding: 28px 32px 32px;
+  border-radius: 32px;
+  background:
+    linear-gradient(152deg, rgba(255, 255, 255, 0.9), rgba(255, 249, 241, 0.72));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    0 18px 50px rgba(16, 24, 32, 0.08);
+  overflow: hidden;
+}
+
+.VPHomeHero .main::before {
+  content: "";
+  position: absolute;
+  inset: auto auto -120px -90px;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(232, 80, 91, 0.16) 0%, rgba(232, 80, 91, 0) 72%);
+  filter: blur(4px);
+  z-index: -2;
+}
+
+.VPHomeHero .main::after {
+  content: "";
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: clamp(150px, 22vw, 240px);
+  aspect-ratio: 1;
+  background: url("/matanyone-hero-shapes.svg") center / contain no-repeat;
+  opacity: 0.22;
+  z-index: -1;
+}
+
+@media (min-width: 961px) {
+  .VPHomeHero .main {
+    padding-right: clamp(56px, 17vw, 220px);
+  }
+}
+
 .VPHomeHero .image-container {
   padding: 16px;
   border-radius: 28px;
@@ -28,4 +71,29 @@
 .vp-doc h3,
 .VPNavBarTitle .title {
   letter-spacing: 0.01em;
+}
+
+@media (max-width: 960px) {
+  .VPHomeHero .main {
+    padding: 24px 24px 120px;
+  }
+
+  .VPHomeHero .main::after {
+    top: auto;
+    right: -8px;
+    bottom: -18px;
+    width: 168px;
+    opacity: 0.18;
+  }
+}
+
+@media (max-width: 640px) {
+  .VPHomeHero .main {
+    padding: 22px 20px 104px;
+  }
+
+  .VPHomeHero .main::after {
+    width: 146px;
+    bottom: -10px;
+  }
 }
