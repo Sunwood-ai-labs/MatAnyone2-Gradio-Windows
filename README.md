@@ -95,6 +95,28 @@ uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --help
 
 `--performance_profile auto` resolves to `fast` on CPU and `quality` on GPU. `--sam_model_type auto` also picks `vit_b` on CPU and `vit_h` on GPU. You can switch both from the CLI before launch.
 
+## CLI Validation
+
+The Gradio app and the CLI now share the same runtime core under [`matanyone2/demo_core.py`](./matanyone2/demo_core.py). For faster verification during development, you can run the same pipeline without launching the web UI:
+
+```powershell
+uv run --python .\.venv\Scripts\python.exe python -m matanyone2.cli --input .\media\bookcat.mp4 --device cuda --model "MatAnyone 2" --positive_point center --output_dir .\results\cli
+```
+
+The legacy validation script is now just a thin wrapper around the same shared CLI:
+
+```powershell
+uv run --python .\.venv\Scripts\python.exe python .\scripts\run_pipeline_check.py --input .\media\bookcat.mp4 --device cpu --performance_profile fast --positive_point center
+```
+
+Every run now creates a folder like `results/<input-name>_<timestamp>/` and writes both final outputs and debug artifacts there, including the selected input frame, SAM preview/mask, first and last matting frames, and a `metadata.json` snapshot of the run configuration.
+
+To reproduce the historical `bookcat-profile-exp` benchmark outputs more closely, pin the same prompt points and video/output FPS explicitly:
+
+```powershell
+uv run --python .\.venv\Scripts\python.exe python -m matanyone2.cli --input .\media\bookcat.mp4 --device cpu --performance_profile fast --cpu_threads 8 --sam_model_type vit_h --frame_limit 241 --video_target_fps 0 --output_fps 12 --positive_point 280,180 --negative_point 30,30 --negative_point 530,30 --model "MatAnyone 2" --output_dir .\results
+```
+
 ## 📚 Documentation
 
 Structured docs now live under the published site at [sunwood-ai-labs.github.io/MatAnyone2-Gradio-Windows](https://sunwood-ai-labs.github.io/MatAnyone2-Gradio-Windows/) and in the source tree under [`docs/`](./docs/index.md).

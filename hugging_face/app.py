@@ -1,19 +1,9 @@
 import os
 import sys
 import json
-import time
-import glob
-import gc
-import shutil
-import psutil
-import ffmpeg
-import imageio
-import imageio_ffmpeg
 import argparse
 import warnings
 from PIL import Image
-import torch
-from omegaconf import OmegaConf, open_dict
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_DIR = os.path.dirname(APP_DIR)
@@ -23,81 +13,35 @@ for path in (APP_DIR, REPO_DIR):
         sys.path.append(path)
 
 import cv2
-import numpy as np
 import gradio as gr
  
 from tools.painter import mask_painter
-from tools.interact_tools import SamControler
 from tools.misc import get_device
 from tools.download_util import load_file_from_url
 
-from matanyone2_wrapper import matanyone2
-from matanyone2.utils.get_default_model import get_matanyone2_model
-from matanyone2.inference.inference_core import InferenceCore
+from matanyone2.demo_core import (
+    PROFILE_CHOICES,
+    SAM_MODEL_CHOICES,
+    RuntimeModelManager,
+    SamMaskGenerator,
+    apply_sam_points,
+    create_run_output_dir,
+    compose_selected_mask,
+    configure_ffmpeg_binary,
+    configure_runtime,
+    create_empty_media_state,
+    export_debug_artifacts,
+    generate_video_from_frames,
+    load_image_state,
+    load_video_state,
+    prepare_sam_frame,
+    resolve_sam_model_type,
+    resize_output_frame,
+    run_matting,
+    save_cli_outputs,
+)
 from matanyone2.utils.device import set_default_device
-from hydra.core.global_hydra import GlobalHydra
 warnings.filterwarnings("ignore")
-
-PERFORMANCE_PROFILES = {
-    "quality": {
-        "video_target_fps": None,
-        "video_max_short_side": 1080,
-        "image_max_short_side": 1536,
-        "max_internal_size": -1,
-        "n_warmup": 10,
-    },
-    "balanced": {
-        "video_target_fps": 12,
-        "video_max_short_side": 720,
-        "image_max_short_side": 1024,
-        "max_internal_size": 768,
-        "n_warmup": 4,
-    },
-    "fast": {
-        "video_target_fps": 8,
-        "video_max_short_side": 640,
-        "image_max_short_side": 832,
-        "max_internal_size": 640,
-        "n_warmup": 2,
-    },
-}
-
-PROFILE_CHOICES = ["auto", "balanced", "fast", "quality"]
-SAM_MODEL_CHOICES = ["auto", "vit_h", "vit_l", "vit_b"]
-
-def configure_ffmpeg_binary():
-    candidates = []
-
-    env_ffmpeg = os.environ.get("IMAGEIO_FFMPEG_EXE")
-    if env_ffmpeg:
-        candidates.append(env_ffmpeg)
-
-    path_ffmpeg = shutil.which("ffmpeg")
-    if path_ffmpeg:
-        candidates.append(path_ffmpeg)
-
-    try:
-        bundled_ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
-        if bundled_ffmpeg:
-            candidates.append(bundled_ffmpeg)
-    except Exception:
-        pass
-
-    winget_root = os.path.join(os.environ.get("LOCALAPPDATA", ""), "Microsoft", "WinGet", "Packages")
-    if os.path.isdir(winget_root):
-        candidates.extend(glob.glob(os.path.join(winget_root, "**", "ffmpeg.exe"), recursive=True))
-
-    for candidate in candidates:
-        if candidate and os.path.exists(candidate):
-            ffmpeg_dir = os.path.dirname(candidate)
-            os.environ["IMAGEIO_FFMPEG_EXE"] = candidate
-            current_path = os.environ.get("PATH", "")
-            path_entries = current_path.split(os.pathsep) if current_path else []
-            if ffmpeg_dir not in path_entries:
-                os.environ["PATH"] = ffmpeg_dir + os.pathsep + current_path if current_path else ffmpeg_dir
-            return candidate
-
-    return None
 
 FFMPEG_BINARY = configure_ffmpeg_binary()
 if FFMPEG_BINARY:
@@ -120,116 +64,6 @@ def parse_augment():
         args.device = str(get_device())
 
     return args 
-
-
-def configure_runtime(device_name, cpu_threads=None):
-    device = torch.device(device_name)
-    if hasattr(torch.backends, "mkldnn"):
-        torch.backends.mkldnn.enabled = True
-
-    if device.type != "cpu":
-        return
-
-    cpu_count = os.cpu_count() or 4
-    threads = cpu_threads if cpu_threads and cpu_threads > 0 else max(1, cpu_count - 1 if cpu_count > 4 else cpu_count)
-    torch.set_num_threads(threads)
-    if hasattr(torch, "set_num_interop_threads"):
-        try:
-            torch.set_num_interop_threads(max(1, min(4, threads)))
-        except RuntimeError:
-            pass
-    if hasattr(torch, "set_float32_matmul_precision"):
-        torch.set_float32_matmul_precision("high")
-    cv2.setNumThreads(max(1, min(4, threads)))
-    print(f"Configured CPU runtime with {threads} Torch threads.")
-
-
-def resolve_performance_profile(profile_name, device_name):
-    normalized = (profile_name or "auto").strip().lower()
-    device_type = torch.device(device_name).type
-    if normalized == "auto":
-        normalized = "fast" if device_type == "cpu" else "quality"
-    profile = dict(PERFORMANCE_PROFILES[normalized])
-    profile["name"] = normalized
-    profile["device_type"] = device_type
-    return profile
-
-
-def maybe_resize_frame(frame, max_short_side):
-    if max_short_side is None or max_short_side <= 0:
-        return frame
-
-    height, width = frame.shape[:2]
-    short_side = min(height, width)
-    if short_side <= max_short_side:
-        return frame
-
-    scale = max_short_side / float(short_side)
-    new_width = max(1, int(round(width * scale)))
-    new_height = max(1, int(round(height * scale)))
-    return cv2.resize(frame, (new_width, new_height), interpolation=cv2.INTER_AREA)
-
-
-def resize_output_frame(frame, target_size, interpolation=cv2.INTER_LINEAR):
-    if target_size is None:
-        return frame
-
-    target_h, target_w = target_size
-    if frame.shape[0] == target_h and frame.shape[1] == target_w:
-        return frame
-    resized = cv2.resize(frame, (target_w, target_h), interpolation=interpolation)
-    if frame.ndim == 3 and frame.shape[2] == 1 and resized.ndim == 2:
-        resized = resized[:, :, None]
-    return resized
-
-
-def build_inference_core(selected_model, performance_profile):
-    runtime_profile = resolve_performance_profile(performance_profile, args.device)
-    runtime_cfg = OmegaConf.create(OmegaConf.to_container(selected_model.cfg, resolve=True))
-    with open_dict(runtime_cfg):
-        runtime_cfg.max_internal_size = runtime_profile["max_internal_size"]
-    return InferenceCore(selected_model, cfg=runtime_cfg, device=args.device), runtime_profile
-
-
-def resolve_sam_model_type(requested_model_type, device_name):
-    normalized = (requested_model_type or "auto").strip().lower()
-    if normalized != "auto":
-        return normalized
-    return "vit_b" if torch.device(device_name).type == "cpu" else "vit_h"
-
-
-def sam_image_key(state, frame_index):
-    return f"{state.get('user_name', 'session')}:{frame_index}"
-
-# SAM generator
-class MaskGenerator():
-    def __init__(self, sam_checkpoint, args):
-        self.args = args
-        self.sam_checkpoint = sam_checkpoint
-        self.sam_model_type = args.sam_model_type
-        self.device = args.device
-        self.samcontroler = None
-
-    def _ensure_loaded(self):
-        if self.samcontroler is None:
-            self.samcontroler = SamControler(self.sam_checkpoint, self.sam_model_type, self.device)
-        return self.samcontroler
-
-    def prepare_image(self, image: np.ndarray, image_key=None, force=False):
-        self._ensure_loaded().prepare_image(image, image_key=image_key, force=force)
-       
-    def first_frame_click(self, image: np.ndarray, points:np.ndarray, labels: np.ndarray, multimask=True):
-        mask, logit, painted_image = self._ensure_loaded().first_frame_click(image, points, labels, multimask)
-        return mask, logit, painted_image
-
-    def release(self):
-        if self.samcontroler is None:
-            return
-        self.samcontroler.release()
-        self.samcontroler = None
-        gc.collect()
-        if torch.cuda.is_available() and torch.device(self.device).type == "cuda":
-            torch.cuda.empty_cache()
     
 # convert points input to prompt state
 def get_prompt(click_state, click_input):
@@ -250,43 +84,11 @@ def get_prompt(click_state, click_input):
     return prompt
 
 def get_frames_from_image(image_input, image_state, performance_profile):
-    """
-    Args:
-        video_path:str
-        timestamp:float64
-    Return 
-        [[0:nearest_frame], [nearest_frame:], nearest_frame]
-    """
-
-    runtime_profile = resolve_performance_profile(performance_profile, args.device)
-    user_name = time.time()
-    source_size = (image_input.shape[0], image_input.shape[1])
-    working_image = maybe_resize_frame(image_input, runtime_profile["image_max_short_side"])
-    frames = [working_image] * 2  # hardcode: mimic a video with 2 frames
-    image_size = (frames[0].shape[0],frames[0].shape[1]) 
-    # initialize video_state
-    image_state = {
-        "user_name": user_name,
-        "image_name": "output.png",
-        "origin_images": frames,
-        "painted_images": frames.copy(),
-        "masks": [np.zeros((frames[0].shape[0],frames[0].shape[1]), np.uint8)]*len(frames),
-        "logits": [None]*len(frames),
-        "select_frame_number": 0,
-        "fps": None,
-        "source_size": source_size,
-        "working_size": image_size,
-        "performance_profile": runtime_profile["name"],
-        }
-    image_info = "Image Name: N/A,\nFPS: N/A,\nTotal Frames: {},\nSource Size:{},\nWorking Size:{},\nProfile:{}".format(
-        len(frames),
-        source_size,
-        image_size,
-        runtime_profile["name"],
-    )
-    model.prepare_image(image_state["origin_images"][0], sam_image_key(image_state, 0), force=True)
+    image_state, image_info, _runtime_profile = load_image_state(image_input, args.device, performance_profile)
+    prepare_sam_frame(model, image_state, 0, force=True)
+    frame_count = len(image_state["origin_images"])
     return image_state, image_info, image_state["origin_images"][0], \
-                        gr.update(visible=True, maximum=10, value=10), gr.update(visible=False, maximum=len(frames), value=len(frames)), \
+                        gr.update(visible=True, maximum=10, value=10), gr.update(visible=False, maximum=frame_count, value=frame_count), \
                         gr.update(visible=True), gr.update(visible=True), \
                         gr.update(visible=True), gr.update(visible=True),\
                         gr.update(visible=True), gr.update(visible=True), \
@@ -296,92 +98,10 @@ def get_frames_from_image(image_input, image_state, performance_profile):
 
 # extract frames from upload video
 def get_frames_from_video(video_input, video_state, performance_profile):
-    """
-    Args:
-        video_path:str
-        timestamp:float64
-    Return 
-        [[0:nearest_frame], [nearest_frame:], nearest_frame]
-    """
-    runtime_profile = resolve_performance_profile(performance_profile, args.device)
-    video_path = video_input
-    frames = []
-    user_name = time.time()
-    source_size = None
-
-    # extract Audio
-    try:
-        video_root, _ = os.path.splitext(video_input)
-        audio_path = f"{video_root}_audio.wav"
-        ffmpeg.input(video_path).output(audio_path, format='wav', acodec='pcm_s16le', ac=2, ar='44100').run(overwrite_output=True, quiet=True)
-    except Exception as e:
-        print(f"Audio extraction error: {str(e)}")
-        audio_path = ""  # Set to "" if extraction fails
-    
-    # extract frames
-    try:
-        cap = cv2.VideoCapture(video_path)
-        source_fps = cap.get(cv2.CAP_PROP_FPS)
-        if not source_fps or source_fps <= 0:
-            source_fps = 30.0
-        frame_stride = 1
-        target_fps = runtime_profile["video_target_fps"]
-        if target_fps:
-            frame_stride = max(1, int(round(source_fps / target_fps)))
-        fps = source_fps / frame_stride
-        frame_index = 0
-        while cap.isOpened():
-            ret, frame = cap.read()
-            if ret:
-                if source_size is None:
-                    source_size = (frame.shape[0], frame.shape[1])
-                if frame_index % frame_stride != 0:
-                    frame_index += 1
-                    continue
-                current_memory_usage = psutil.virtual_memory().percent
-                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                frames.append(maybe_resize_frame(rgb_frame, runtime_profile["video_max_short_side"]))
-                if current_memory_usage > 90:
-                    break
-                frame_index += 1
-            else:
-                break
-        cap.release()
-    except (OSError, TypeError, ValueError, KeyError, SyntaxError) as e:
-        print("read_frame_source:{} error. {}\n".format(video_path, str(e)))
-    if not frames:
-        raise ValueError("No frames could be extracted from the selected video.")
-
-    image_size = (frames[0].shape[0],frames[0].shape[1]) 
-
-    # initialize video_state
-    video_state = {
-        "user_name": user_name,
-        "video_name": os.path.split(video_path)[-1],
-        "origin_images": frames,
-        "painted_images": frames.copy(),
-        "masks": [np.zeros((frames[0].shape[0],frames[0].shape[1]), np.uint8)]*len(frames),
-        "logits": [None]*len(frames),
-        "select_frame_number": 0,
-        "fps": fps,
-        "audio": audio_path,
-        "source_fps": source_fps,
-        "frame_stride": frame_stride,
-        "source_size": source_size or image_size,
-        "working_size": image_size,
-        "performance_profile": runtime_profile["name"],
-        }
-    video_info = "Video Name: {},\nSource FPS: {},\nProcessing FPS: {},\nTotal Frames: {},\nSource Size:{},\nWorking Size:{},\nProfile:{}".format(
-        video_state["video_name"],
-        round(video_state["source_fps"], 1),
-        round(video_state["fps"], 1),
-        len(frames),
-        video_state["source_size"],
-        image_size,
-        runtime_profile["name"],
-    )
-    model.prepare_image(video_state["origin_images"][0], sam_image_key(video_state, 0), force=True)
-    return video_state, video_info, video_state["origin_images"][0], gr.update(visible=True, maximum=len(frames), value=1), gr.update(visible=False, maximum=len(frames), value=len(frames)), \
+    video_state, video_info, _runtime_profile = load_video_state(video_input, args.device, performance_profile)
+    prepare_sam_frame(model, video_state, 0, force=True)
+    frame_count = len(video_state["origin_images"])
+    return video_state, video_info, video_state["origin_images"][0], gr.update(visible=True, maximum=frame_count, value=1), gr.update(visible=False, maximum=frame_count, value=frame_count), \
                         gr.update(visible=True), gr.update(visible=True), \
                         gr.update(visible=True), gr.update(visible=True),\
                         gr.update(visible=True), gr.update(visible=True), \
@@ -395,12 +115,7 @@ def select_video_template(image_selection_slider, video_state, interactive_state
     image_selection_slider -= 1
     video_state["select_frame_number"] = image_selection_slider
 
-    # once select a new template frame, set the image in sam
-    model.prepare_image(
-        video_state["origin_images"][image_selection_slider],
-        sam_image_key(video_state, image_selection_slider),
-        force=True,
-    )
+    prepare_sam_frame(model, video_state, image_selection_slider, force=True)
 
     return video_state["painted_images"][image_selection_slider], video_state, interactive_state
 
@@ -409,12 +124,7 @@ def select_image_template(image_selection_slider, video_state, interactive_state
     image_selection_slider = 0 # fixed for image
     video_state["select_frame_number"] = image_selection_slider
 
-    # once select a new template frame, set the image in sam
-    model.prepare_image(
-        video_state["origin_images"][image_selection_slider],
-        sam_image_key(video_state, image_selection_slider),
-        force=True,
-    )
+    prepare_sam_frame(model, video_state, image_selection_slider, force=True)
 
     return video_state["painted_images"][image_selection_slider], video_state, interactive_state
 
@@ -439,20 +149,17 @@ def sam_refine(video_state, point_prompt, click_state, interactive_state, evt:gr
         coordinate = "[[{},{},0]]".format(evt.index[0], evt.index[1])
         interactive_state["negative_click_times"] += 1
     
-    # prompt for sam model
     selected_frame = video_state["select_frame_number"]
-    model.prepare_image(
-        video_state["origin_images"][selected_frame],
-        sam_image_key(video_state, selected_frame),
-    )
     prompt = get_prompt(click_state=click_state, click_input=coordinate)
 
-    mask, logit, painted_image = model.first_frame_click( 
-                                                      image=video_state["origin_images"][selected_frame], 
-                                                      points=np.array(prompt["input_point"]),
-                                                      labels=np.array(prompt["input_label"]),
-                                                      multimask=prompt["multimask_output"],
-                                                      )
+    mask, logit, painted_image = apply_sam_points(
+        model,
+        video_state,
+        prompt["input_point"],
+        prompt["input_label"],
+        frame_index=selected_frame,
+        multimask=prompt["multimask_output"],
+    )
     video_state["masks"][selected_frame] = mask
     video_state["logits"][selected_frame] = logit
     video_state["painted_images"][selected_frame] = painted_image
@@ -493,203 +200,129 @@ def show_mask(video_state, interactive_state, mask_dropdown):
 # image matting
 def image_matting(video_state, interactive_state, mask_dropdown, erode_kernel_size, dilate_kernel_size, refine_iter, model_selection, performance_profile):
     model.release()
-    # Load model if not already loaded
     try:
         selected_model = load_model(model_selection)
     except (FileNotFoundError, ValueError) as e:
-        # Fallback to first available model
         if available_models:
             print(f"Warning: {str(e)}. Using {available_models[0]} instead.")
             selected_model = load_model(available_models[0])
         else:
             raise ValueError("No models are available! Please check if the model files exist.")
-    matanyone_processor, runtime_profile = build_inference_core(selected_model, performance_profile)
-    if interactive_state["track_end_number"]:
-        following_frames = video_state["origin_images"][video_state["select_frame_number"]:interactive_state["track_end_number"]]
-    else:
-        following_frames = video_state["origin_images"][video_state["select_frame_number"]:]
-
+    template_mask = compose_selected_mask(
+        video_state["masks"][video_state["select_frame_number"]],
+        interactive_state["multi_mask"]["masks"],
+        mask_dropdown,
+    )
     if interactive_state["multi_mask"]["masks"]:
-        if len(mask_dropdown) == 0:
-            mask_dropdown = ["mask_001"]
-        mask_dropdown.sort()
-        template_mask = interactive_state["multi_mask"]["masks"][int(mask_dropdown[0].split("_")[1]) - 1] * (int(mask_dropdown[0].split("_")[1]))
-        for i in range(1,len(mask_dropdown)):
-            mask_number = int(mask_dropdown[i].split("_")[1]) - 1 
-            template_mask = np.clip(template_mask+interactive_state["multi_mask"]["masks"][mask_number]*(mask_number+1), 0, mask_number+1)
-        video_state["masks"][video_state["select_frame_number"]]= template_mask
-    else:      
-        template_mask = video_state["masks"][video_state["select_frame_number"]]
+        video_state["masks"][video_state["select_frame_number"]] = template_mask
 
-    # operation error
-    if len(np.unique(template_mask))==1:
-        template_mask[0][0]=1
-    n_warmup = min(int(refine_iter), runtime_profile["n_warmup"]) if runtime_profile["device_type"] == "cpu" else int(refine_iter)
-    foreground, alpha = matanyone2(
-        matanyone_processor,
-        following_frames,
-        template_mask * 255,
-        r_erode=erode_kernel_size,
-        r_dilate=dilate_kernel_size,
-        n_warmup=n_warmup,
+    foreground, alpha, _runtime_profile = run_matting(
+        selected_model,
+        video_state,
+        template_mask,
+        performance_profile,
+        args.device,
+        erode_kernel_size=erode_kernel_size,
+        dilate_kernel_size=dilate_kernel_size,
+        refine_iter=refine_iter,
     )
     target_size = video_state.get("source_size")
     foreground_frame = resize_output_frame(foreground[-1], target_size, interpolation=cv2.INTER_LINEAR)
     alpha_frame = resize_output_frame(alpha[-1], target_size, interpolation=cv2.INTER_LINEAR)
     foreground_output = Image.fromarray(foreground_frame)
     alpha_output = Image.fromarray(alpha_frame[:, :, 0])
+    run_output_dir = create_run_output_dir("./results", video_state)
+    save_cli_outputs(
+        run_output_dir,
+        video_state.get("image_name") or "output.png",
+        target_size,
+        template_mask.astype("uint8"),
+        video_state["painted_images"][video_state["select_frame_number"]],
+        foreground,
+        alpha,
+        False,
+    )
+    debug_dir = export_debug_artifacts(
+        run_output_dir,
+        video_state,
+        template_mask,
+        foreground,
+        alpha,
+        device_name=args.device,
+        performance_profile=performance_profile,
+        model_name=model_selection,
+    )
+    print(f"Saved debug artifacts to {debug_dir}")
 
     return foreground_output, alpha_output
 
 # video matting
 def video_matting(video_state, interactive_state, mask_dropdown, erode_kernel_size, dilate_kernel_size, model_selection, performance_profile):
     model.release()
-    # Load model if not already loaded
     try:
         selected_model = load_model(model_selection)
     except (FileNotFoundError, ValueError) as e:
-        # Fallback to first available model
         if available_models:
             print(f"Warning: {str(e)}. Using {available_models[0]} instead.")
             selected_model = load_model(available_models[0])
         else:
             raise ValueError("No models are available! Please check if the model files exist.")
-    matanyone_processor, runtime_profile = build_inference_core(selected_model, performance_profile)
-    if interactive_state["track_end_number"]:
-        following_frames = video_state["origin_images"][video_state["select_frame_number"]:interactive_state["track_end_number"]]
-    else:
-        following_frames = video_state["origin_images"][video_state["select_frame_number"]:]
-
+    template_mask = compose_selected_mask(
+        video_state["masks"][video_state["select_frame_number"]],
+        interactive_state["multi_mask"]["masks"],
+        mask_dropdown,
+    )
     if interactive_state["multi_mask"]["masks"]:
-        if len(mask_dropdown) == 0:
-            mask_dropdown = ["mask_001"]
-        mask_dropdown.sort()
-        template_mask = interactive_state["multi_mask"]["masks"][int(mask_dropdown[0].split("_")[1]) - 1] * (int(mask_dropdown[0].split("_")[1]))
-        for i in range(1,len(mask_dropdown)):
-            mask_number = int(mask_dropdown[i].split("_")[1]) - 1 
-            template_mask = np.clip(template_mask+interactive_state["multi_mask"]["masks"][mask_number]*(mask_number+1), 0, mask_number+1)
-        video_state["masks"][video_state["select_frame_number"]]= template_mask
-    else:      
-        template_mask = video_state["masks"][video_state["select_frame_number"]]
+        video_state["masks"][video_state["select_frame_number"]] = template_mask
     fps = video_state["fps"]
 
     audio_path = video_state["audio"]
 
-    # operation error
-    if len(np.unique(template_mask))==1:
-        template_mask[0][0]=1
-    foreground, alpha = matanyone2(
-        matanyone_processor,
-        following_frames,
-        template_mask * 255,
-        r_erode=erode_kernel_size,
-        r_dilate=dilate_kernel_size,
-        n_warmup=runtime_profile["n_warmup"],
+    foreground, alpha, _runtime_profile = run_matting(
+        selected_model,
+        video_state,
+        template_mask,
+        performance_profile,
+        args.device,
+        erode_kernel_size=erode_kernel_size,
+        dilate_kernel_size=dilate_kernel_size,
     )
 
     target_size = video_state.get("source_size")
+    run_output_dir = create_run_output_dir("./results", video_state)
     foreground_output = generate_video_from_frames(
         foreground,
-        output_path="./results/{}_fg.mp4".format(video_state["video_name"]),
+        output_path=os.path.join(run_output_dir, "{}_fg.mp4".format(video_state["video_name"])),
         fps=fps,
         audio_path=audio_path,
         target_size=target_size,
     )
     alpha_output = generate_video_from_frames(
         alpha,
-        output_path="./results/{}_alpha.mp4".format(video_state["video_name"]),
+        output_path=os.path.join(run_output_dir, "{}_alpha.mp4".format(video_state["video_name"])),
         fps=fps,
         gray2rgb=True,
         audio_path=audio_path,
         target_size=target_size,
     )
+    debug_dir = export_debug_artifacts(
+        run_output_dir,
+        video_state,
+        template_mask,
+        foreground,
+        alpha,
+        device_name=args.device,
+        performance_profile=performance_profile,
+        model_name=model_selection,
+    )
+    print(f"Saved debug artifacts to {debug_dir}")
     
     return foreground_output, alpha_output
 
-
-def add_audio_to_video(video_path, audio_path, output_path):
-    try:
-        video_input = ffmpeg.input(video_path)
-        audio_input = ffmpeg.input(audio_path)
-
-        _ = (
-            ffmpeg
-            .output(video_input, audio_input, output_path, vcodec="copy", acodec="aac")
-            .run(overwrite_output=True, capture_stdout=True, capture_stderr=True)
-        )
-        return output_path
-    except ffmpeg.Error as e:
-        print(f"FFmpeg error:\n{e.stderr.decode()}")
-        return None
-
-
-def generate_video_from_frames(frames, output_path, fps=30, gray2rgb=False, audio_path="", target_size=None):
-    if not os.path.exists(os.path.dirname(output_path)):
-        os.makedirs(os.path.dirname(output_path))
-
-    video_temp_path = output_path.replace(".mp4", "_temp.mp4")
-    writer = imageio.get_writer(
-        video_temp_path,
-        fps=fps,
-        quality=7,
-        codec="libx264",
-        macro_block_size=1,
-    )
-
-    try:
-        for frame in frames:
-            frame_np = np.asarray(frame)
-            if frame_np.ndim == 2:
-                frame_np = frame_np[:, :, None]
-            if gray2rgb and frame_np.shape[2] == 1:
-                frame_np = np.repeat(frame_np, 3, axis=2)
-            frame_np = resize_output_frame(frame_np, target_size, interpolation=cv2.INTER_LINEAR)
-
-            height, width = frame_np.shape[:2]
-            even_height = height // 2 * 2
-            even_width = width // 2 * 2
-            if height != even_height or width != even_width:
-                frame_np = cv2.resize(frame_np, (even_width, even_height), interpolation=cv2.INTER_LINEAR)
-
-            writer.append_data(frame_np)
-    finally:
-        writer.close()
-
-    if audio_path != "" and os.path.exists(audio_path):
-        output_path = add_audio_to_video(video_temp_path, audio_path, output_path)
-        os.remove(video_temp_path)
-        return output_path
-    return video_temp_path
-
 # reset all states for a new input
 def restart():
-    return {
-            "user_name": "",
-            "video_name": "",
-            "origin_images": None,
-            "painted_images": None,
-            "masks": None,
-            "inpaint_masks": None,
-            "logits": None,
-            "select_frame_number": 0,
-            "fps": 30,
-            "source_fps": 30,
-            "frame_stride": 1,
-            "source_size": None,
-            "working_size": None,
-            "performance_profile": args.performance_profile,
-            "audio": "",
-        }, {
-            "inference_times": 0,
-            "negative_click_times" : 0,
-            "positive_click_times": 0,
-            "mask_save": args.mask_save,
-            "multi_mask": {
-                "mask_names": [],
-                "masks": []
-            },
-            "track_end_number": None,
-        }, [[],[]], None, None, \
+    media_state, interactive_state = create_empty_media_state(args.performance_profile, args.mask_save)
+    return media_state, interactive_state, [[],[]], None, None, \
         gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),\
         gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), \
         gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), \
@@ -700,91 +333,16 @@ args = parse_augment()
 set_default_device(args.device)
 configure_runtime(args.device, args.cpu_threads)
 args.sam_model_type = resolve_sam_model_type(args.sam_model_type, args.device)
-sam_checkpoint_url_dict = {
-    'vit_h': "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth",
-    'vit_l': "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_l_0b3195.pth",
-    'vit_b': "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth"
-}
 checkpoint_folder = os.path.join(REPO_DIR, 'pretrained_models')
-
-sam_checkpoint = load_file_from_url(sam_checkpoint_url_dict[args.sam_model_type], checkpoint_folder)
+runtime_models = RuntimeModelManager(args.device, checkpoint_folder)
+sam_checkpoint = runtime_models.get_sam_checkpoint(args.sam_model_type)
 print(f"Using SAM model type: {args.sam_model_type}")
-# initialize sams
-model = MaskGenerator(sam_checkpoint, args)
-
-# initialize matanyone - lazy loading
-# Model display names to file names mapping
-model_display_to_file = {
-    "MatAnyone": "matanyone.pth",
-    "MatAnyone 2": "matanyone2.pth"
-}
-
-# Model URLs
-model_urls = {
-    "matanyone.pth": "https://github.com/pq-yang/MatAnyone/releases/download/v1.0.0/matanyone.pth",
-    "matanyone2.pth": "https://github.com/pq-yang/MatAnyone2/releases/download/v1.0.0/matanyone2.pth"
-}
-
-# Model paths - download models using load_file_from_url
-model_paths = {
-    "matanyone.pth": load_file_from_url(model_urls["matanyone.pth"], checkpoint_folder),
-    "matanyone2.pth": load_file_from_url(model_urls["matanyone2.pth"], checkpoint_folder)
-}
-
-# Cache for loaded models (lazy loading)
-loaded_models = {}
+model = SamMaskGenerator(sam_checkpoint, args.sam_model_type, args.device)
 
 def load_model(display_name):
-    """Load a model if not already loaded"""
-    # Convert display name to file name
-    if display_name in model_display_to_file:
-        model_file = model_display_to_file[display_name]
-    elif display_name in model_paths:
-        # Also support direct file name for backward compatibility
-        model_file = display_name
-    else:
-        raise ValueError(f"Unknown model: {display_name}")
-    
-    if model_file in loaded_models:
-        return loaded_models[model_file]
+    return runtime_models.load_model(display_name)
 
-    if torch.device(args.device).type == "cpu" and loaded_models:
-        loaded_models.clear()
-        gc.collect()
-    
-    if model_file not in model_paths:
-        raise ValueError(f"Unknown model file: {model_file}")
-    
-    ckpt_path = model_paths[model_file]
-    if not os.path.exists(ckpt_path):
-        raise FileNotFoundError(f"Model file not found: {ckpt_path}")
-    
-    # Clear Hydra instance if already initialized (to allow loading different models)
-    try:
-        GlobalHydra.instance().clear()
-    except Exception:
-        pass  # If Hydra is not initialized, this is fine
-    
-    print(f"Loading model: {display_name} ({model_file})...")
-    model = get_matanyone2_model(ckpt_path, args.device)
-    model = model.to(args.device).eval()
-    loaded_models[model_file] = model
-    print(f"Model {display_name} loaded successfully.")
-    return model
-
-# Get available model choices for the UI (check if files exist)
-# Order: MatAnyone 2 first, then MatAnyone
-available_models = []
-# Check MatAnyone 2 first
-if "MatAnyone 2" in model_display_to_file:
-    file_name = model_display_to_file["MatAnyone 2"]
-    if file_name in model_paths and os.path.exists(model_paths[file_name]):
-        available_models.append("MatAnyone 2")
-# Then check MatAnyone
-if "MatAnyone" in model_display_to_file:
-    file_name = model_display_to_file["MatAnyone"]
-    if file_name in model_paths and os.path.exists(model_paths[file_name]):
-        available_models.append("MatAnyone")
+available_models = runtime_models.prefetch_available_models()
 
 if not available_models:
     raise RuntimeError("No models are available! Please ensure at least one model file exists in ../pretrained_models/")

@@ -47,7 +47,7 @@ uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --help
 Gradio を立ち上げずに `SAM -> MatAnyone -> 出力保存` の全体経路を確認したい場合は、`scripts/run_pipeline_check.py` を使えます。
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\run_pipeline_check.py --input media\bookcat.mp4 --device cpu --performance_profile balanced --cpu_threads 8 --sam_model_type vit_h --frame_limit 241 --positive_point 280,180 --negative_point 30,30 --negative_point 530,30 --output_dir results\bookcat-profile-exp\balanced
+.\.venv\Scripts\python.exe scripts\run_pipeline_check.py --input media\bookcat.mp4 --device cpu --performance_profile balanced --cpu_threads 8 --sam_model_type vit_h --frame_limit 241 --video_target_fps 0 --output_fps 12 --positive_point 280,180 --negative_point 30,30 --negative_point 530,30 --output_dir results\bookcat-profile-exp\balanced
 ```
 
 このスクリプトは [`performance.md`](./performance.md) のプロファイル比較でも使っています。指定した `--output_dir` 配下に、マスクのプレビュー、foreground、alpha、比較用の生成物を保存します。
