@@ -9,6 +9,7 @@ Windows-friendly local runtime for `MatAnyone` and `MatAnyone 2`, with a shared 
 <p align="center">
   <a href="./README.ja.md">日本語</a> |
   <a href="https://sunwood-ai-labs.github.io/MatAnyone2-Gradio-Windows/">Docs</a> |
+  <a href="https://pypi.org/project/matanyone2-runtime/">PyPI</a> |
   <a href="https://github.com/pq-yang/MatAnyone2">MatAnyone 2</a> |
   <a href="https://github.com/pq-yang/MatAnyone">MatAnyone</a> |
   <a href="https://huggingface.co/spaces/PeiqingYang/MatAnyone">Original Space</a>
@@ -47,7 +48,20 @@ winget install Git.Git
 winget install Gyan.FFmpeg
 ```
 
-Create the environment and install the package:
+Install from PyPI if you just want to run the packaged runtime:
+
+```powershell
+uv venv --python 3.10
+uv pip install --python .\.venv\Scripts\python.exe --upgrade pip setuptools wheel
+uv pip install --python .\.venv\Scripts\python.exe torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+uv pip install --python .\.venv\Scripts\python.exe matanyone2-runtime
+```
+
+PyPI package:
+
+- [`matanyone2-runtime` on PyPI](https://pypi.org/project/matanyone2-runtime/)
+
+Install from source instead if you want to modify this repository locally:
 
 ```powershell
 uv venv --python 3.10
@@ -113,6 +127,35 @@ Thin entrypoints:
 - `matanyone2/runtime.py` for the package-friendly `matanyone2-runtime` launcher
 - `scripts/run_pipeline_check.py` as a compatibility wrapper around the CLI
 
+## Python API
+
+The PyPI package now exposes an import-friendly API for host applications that want to call MatAnyone directly instead of shelling out to the CLI.
+
+```python
+from matanyone2 import run_pipeline
+
+result = run_pipeline(
+    input_path="bookcat.mp4",
+    device="cpu",
+    model="MatAnyone 2",
+    positive_points=["280,180"],
+)
+
+print(result["foreground_path"])
+print(result["alpha_path"])
+```
+
+The returned dictionary includes:
+
+- `run_output_dir`
+- `debug_dir`
+- `foreground_path`
+- `alpha_path`
+- `mask_path`
+- `sam_preview_path`
+- `is_video`
+- `fps`
+
 ## Reproducible Validation
 
 To reproduce the historical `bookcat-profile-exp` style run more closely, pin the same prompt points and FPS settings:
@@ -136,13 +179,17 @@ GitHub Actions now covers the main repository lifecycle:
 If you want to cut a release:
 
 ```powershell
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.2.0
+git push origin v0.2.0
 ```
 
 That tag will trigger the package release workflow automatically.
 
 To make PyPI publishing work, configure a trusted publisher for this repository on PyPI and bind it to the `pypi` GitHub Actions environment.
+
+Published package:
+
+- [`matanyone2-runtime` on PyPI](https://pypi.org/project/matanyone2-runtime/)
 
 ## Documentation
 

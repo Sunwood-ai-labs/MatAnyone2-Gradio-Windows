@@ -52,7 +52,7 @@ jobs:
       - name: Lint maintained Python surfaces
         run: |
           uvx ruff check pyproject.toml hugging_face/app.py hugging_face/__init__.py scripts/run_pipeline_check.py
-          uvx ruff check matanyone2/__init__.py matanyone2/__main__.py matanyone2/cli.py matanyone2/demo_core.py matanyone2/gradio.py matanyone2/runtime.py
+          uvx ruff check matanyone2/__init__.py matanyone2/__main__.py matanyone2/api.py matanyone2/cli.py matanyone2/demo_core.py matanyone2/gradio.py matanyone2/runtime.py
 
   package-checks:
     runs-on: ubuntu-latest
@@ -77,11 +77,21 @@ jobs:
           ./.pkg-venv/bin/python -m pip install --upgrade pip
           ./.pkg-venv/bin/python -m pip install --no-deps -e .
           ./.pkg-venv/bin/python -c "import importlib.metadata as m; print(m.version('matanyone2-runtime'))"
+          ./.pkg-venv/bin/python -c "from matanyone2 import run_pipeline; print(callable(run_pipeline))"
           ./.pkg-venv/bin/matanyone2-runtime --help
           ./.pkg-venv/bin/python -m matanyone2 --help
           test -x ./.pkg-venv/bin/matanyone2-runtime
           test -x ./.pkg-venv/bin/matanyone-cli
           test -x ./.pkg-venv/bin/matanyone-gradio
+
+      - name: Verify wheel install exports Python API
+        run: |
+          python -m venv .wheel-venv
+          ./.wheel-venv/bin/python -m pip install --upgrade pip
+          ./.wheel-venv/bin/python -m pip install --no-deps dist/*.whl
+          ./.wheel-venv/bin/python -c "import importlib.metadata as m; print(m.version('matanyone2-runtime'))"
+          ./.wheel-venv/bin/python -c "from matanyone2 import run_pipeline; print(callable(run_pipeline))"
+          ./.wheel-venv/bin/matanyone2-runtime --help
 
   readme-links:
     runs-on: ubuntu-latest
