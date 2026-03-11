@@ -4,11 +4,12 @@
   <img src="https://sunwood-ai-labs.github.io/MatAnyone2-Gradio-Windows/matanyone-hero.svg" alt="MatAnyone hero banner" width="100%" />
 </p>
 
-`MatAnyone` / `MatAnyone 2` をローカルで扱いやすくした Windows 向けランタイムです。Gradio WebUI と CLI が `matanyone2/demo_core.py` の共通コアを使うので、UI 検証と CLI 検証の結果を揃えやすくしています。
+`MatAnyone` / `MatAnyone 2` を Windows でローカル実行しやすくしたランタイムです。Gradio WebUI と CLI の両方が `matanyone2/demo_core.py` の共通コアを使うので、UI 操作と CLI 検証の結果をそろえやすくしています。
 
 <p align="center">
   <a href="./README.md">English</a> |
   <a href="https://sunwood-ai-labs.github.io/MatAnyone2-Gradio-Windows/">Docs</a> |
+  <a href="https://pypi.org/project/matanyone2-runtime/">PyPI</a> |
   <a href="https://github.com/pq-yang/MatAnyone2">MatAnyone 2</a> |
   <a href="https://github.com/pq-yang/MatAnyone">MatAnyone</a> |
   <a href="https://huggingface.co/spaces/PeiqingYang/MatAnyone">Original Space</a>
@@ -18,10 +19,10 @@
 
 - `matanyone2-runtime webui` で Gradio UI を起動
 - `matanyone2-runtime cli` で同じ処理系を CLI から実行
-- `results/<input-name>_<timestamp>/` に最終成果物と中間ファイルをまとめて保存
-- `metadata.json` と SAM / matting の途中成果物でデバッグしやすい実行ログを残す
+- `results/<input-name>_<timestamp>/` に実行ごとの成果物と中間ファイルを保存
+- `metadata.json` と SAM / matting のデバッグ出力を残して再現しやすくする
 
-## セットアップ
+## クイックスタート
 
 必要なもの:
 
@@ -30,8 +31,9 @@
 - `uv`
 - `git`
 - `ffmpeg`
+- 実用速度を出すなら NVIDIA GPU 推奨
 
-基本ツールのインストール:
+基本ツールは `winget` で入れられます:
 
 ```powershell
 winget install astral-sh.uv
@@ -39,7 +41,20 @@ winget install Git.Git
 winget install Gyan.FFmpeg
 ```
 
-仮想環境とパッケージのインストール:
+まず PyPI 版を使う場合:
+
+```powershell
+uv venv --python 3.10
+uv pip install --python .\.venv\Scripts\python.exe --upgrade pip setuptools wheel
+uv pip install --python .\.venv\Scripts\python.exe torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+uv pip install --python .\.venv\Scripts\python.exe matanyone2-runtime
+```
+
+PyPI パッケージ:
+
+- [`matanyone2-runtime` on PyPI](https://pypi.org/project/matanyone2-runtime/)
+
+このリポジトリ自体を編集したい場合は、ソースから editable install を使います:
 
 ```powershell
 uv venv --python 3.10
@@ -48,14 +63,14 @@ uv pip install --python .\.venv\Scripts\python.exe torch torchvision torchaudio 
 uv pip install --python .\.venv\Scripts\python.exe -e .
 ```
 
-利用できるエントリポイント:
+使えるエントリポイント:
 
 - `matanyone2-runtime`
 - `matanyone-cli`
 - `matanyone-gradio`
 - `python -m matanyone2`
 
-おすすめは unified runtime です。
+おすすめの統一エントリポイント:
 
 ```powershell
 uv run --python .\.venv\Scripts\python.exe matanyone2-runtime webui --device cuda --port 7860 --server_name 127.0.0.1
@@ -66,7 +81,7 @@ uv run --python .\.venv\Scripts\python.exe matanyone2-runtime cli --input .\medi
 
 各 run は `results/bookcat_1773163828_6577592/` のような専用フォルダを作ります。
 
-中には次のようなファイルが入ります。
+主な内容:
 
 - `*_foreground.mp4`, `*_alpha.mp4`, `*_mask.png`
 - `input_first_frame.png`, `input_selected_frame.png`
@@ -76,7 +91,7 @@ uv run --python .\.venv\Scripts\python.exe matanyone2-runtime cli --input .\medi
 
 ## CI/CD
 
-GitHub Actions では次を整備しています。
+GitHub Actions では次を自動化しています。
 
 - `Repo Checks`: docs build、Python compile、lint、package build、entrypoint 確認
 - `Docs Pages`: `main` への push で VitePress を GitHub Pages にデプロイ
@@ -90,6 +105,10 @@ git push origin v0.1.0
 ```
 
 PyPI 公開を有効にするには、PyPI 側でこの GitHub リポジトリを trusted publisher として登録し、GitHub Actions の `pypi` environment と対応付けてください。
+
+公開中のパッケージ:
+
+- [`matanyone2-runtime` on PyPI](https://pypi.org/project/matanyone2-runtime/)
 
 ## ドキュメント
 

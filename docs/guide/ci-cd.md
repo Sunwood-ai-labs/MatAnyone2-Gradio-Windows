@@ -60,6 +60,10 @@ PyPI publishing needs one-time configuration outside the repository:
 
 The current workflow uses the official `pypa/gh-action-pypi-publish` action with OIDC, so no long-lived API token needs to be stored in GitHub secrets once trusted publishing is configured.
 
+Published package:
+
+- [`matanyone2-runtime` on PyPI](https://pypi.org/project/matanyone2-runtime/)
+
 ## Local verification before pushing
 
 These are the same checks we use locally before relying on CI:

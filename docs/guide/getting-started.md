@@ -17,9 +17,24 @@ winget install Git.Git
 winget install Gyan.FFmpeg
 ```
 
-## Install dependencies
+## Install from PyPI
 
-From the repository root:
+If you just want to run the packaged runtime, install the published PyPI build after installing PyTorch:
+
+```powershell
+uv venv --python 3.10
+uv pip install --python .\.venv\Scripts\python.exe --upgrade pip setuptools wheel
+uv pip install --python .\.venv\Scripts\python.exe torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+uv pip install --python .\.venv\Scripts\python.exe matanyone2-runtime
+```
+
+Package page:
+
+- [`matanyone2-runtime` on PyPI](https://pypi.org/project/matanyone2-runtime/)
+
+## Install from source
+
+If you want to work on this repository itself, use an editable install from the repository root:
 
 ```powershell
 uv venv --python 3.10

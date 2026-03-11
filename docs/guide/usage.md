@@ -42,6 +42,11 @@ Common flags:
 - `--performance_profile auto|quality|balanced|fast`
 - `--cpu_threads 8`
 
+If you installed from PyPI instead of an editable checkout, the same commands still apply. On Windows the generated launcher is usually available as either:
+
+- `matanyone2-runtime ...`
+- `.\.venv\Scripts\matanyone2-runtime.exe ...`
+
 ## CLI validation script
 
 You can validate the full `SAM -> MatAnyone -> save outputs` path without launching Gradio:

@@ -13,6 +13,9 @@ hero:
       text: Get Started
       link: /guide/getting-started
     - theme: alt
+      text: PyPI Package
+      link: https://pypi.org/project/matanyone2-runtime/
+    - theme: alt
       text: Read the Architecture
       link: /guide/architecture
     - theme: alt
@@ -29,4 +32,6 @@ features:
     details: Every run creates a timestamped folder with final outputs, SAM previews, masks, snapshots, and metadata.json.
   - title: Release-ready repository
     details: GitHub Actions now verifies the package, builds docs, deploys Pages, and publishes release artifacts on version tags.
+  - title: Published on PyPI
+    details: The packaged runtime is available as matanyone2-runtime on PyPI for direct installation without cloning the repo.
 ---

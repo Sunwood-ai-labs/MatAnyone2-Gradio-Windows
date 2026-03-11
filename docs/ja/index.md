@@ -4,7 +4,7 @@ layout: home
 hero:
   name: MatAnyone
   text: Windows 向けローカルランタイム
-  tagline: CLI と Gradio WebUI を同じコアで動かし、再現しやすい検証と配布を支えるドキュメントです。
+  tagline: CLI と Gradio WebUI の共通ドキュメント。再現しやすい実行方法、パッケージ利用、リリース運用をまとめています。
   image:
     src: /matanyone-hero.svg
     alt: MatAnyone hero
@@ -12,6 +12,9 @@ hero:
     - theme: brand
       text: セットアップ
       link: /ja/guide/getting-started
+    - theme: alt
+      text: PyPI パッケージ
+      link: https://pypi.org/project/matanyone2-runtime/
     - theme: alt
       text: アーキテクチャ
       link: /ja/guide/architecture
@@ -24,9 +27,11 @@ hero:
 
 features:
   - title: 共通ランタイム
-    details: CLI と WebUI はどちらも matanyone2/demo_core.py を通るので、検証経路を揃えやすくなっています。
+    details: CLI と WebUI はどちらも matanyone2/demo_core.py を通るので、検証結果と UI 動作をそろえやすい構成です。
   - title: デバッグしやすい出力
-    details: 各 run はタイムスタンプ付きフォルダへ保存され、中間ファイルと metadata.json も一緒に残ります。
-  - title: 配布しやすい運用
-    details: GitHub Actions で docs build、package build、Pages 配信、release artifact 作成まで自動化しています。
+    details: 各 run はタイムスタンプ付きフォルダにまとまり、成果物、SAM preview、mask、snapshot、metadata.json を残します。
+  - title: リリース運用込み
+    details: GitHub Actions が docs build、package build、Pages 配信、version tag での公開までカバーします。
+  - title: PyPI 公開済み
+    details: matanyone2-runtime は PyPI から直接インストールでき、リポジトリを clone しなくても使い始められます。
 ---
