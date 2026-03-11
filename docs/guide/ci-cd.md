@@ -40,6 +40,7 @@ When you push a tag like `v0.1.0`, the release workflow:
 3. uploads the artifacts to the workflow run
 4. creates or updates the GitHub Release for that tag
 5. attaches the generated files to the release
+6. publishes the same artifacts to PyPI through GitHub trusted publishing
 
 Example:
 
@@ -47,6 +48,17 @@ Example:
 git tag v0.1.0
 git push origin v0.1.0
 ```
+
+## PyPI setup
+
+PyPI publishing needs one-time configuration outside the repository:
+
+1. Create the `matanyone2-runtime` project on PyPI, or claim the name you intend to publish.
+2. In PyPI, add a trusted publisher for this GitHub repository and workflow.
+3. Match it to the `pypi` environment used by `.github/workflows/release-package.yml`.
+4. Keep tagged releases on `main` so the workflow and PyPI publisher configuration stay aligned.
+
+The current workflow uses the official `pypa/gh-action-pypi-publish` action with OIDC, so no long-lived API token needs to be stored in GitHub secrets once trusted publishing is configured.
 
 ## Local verification before pushing
 

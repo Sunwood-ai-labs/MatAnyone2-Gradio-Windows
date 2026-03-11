@@ -80,7 +80,7 @@ GitHub Actions では次を整備しています。
 
 - `Repo Checks`: docs build、Python compile、lint、package build、entrypoint 確認
 - `Docs Pages`: `main` への push で VitePress を GitHub Pages にデプロイ
-- `Release Package`: `v*` タグで wheel / sdist / SHA256SUMS を作成して GitHub Release に添付
+- `Release Package`: `v*` タグで wheel / sdist / SHA256SUMS を作成し、GitHub Release と PyPI に公開
 
 リリース例:
 
@@ -88,6 +88,8 @@ GitHub Actions では次を整備しています。
 git tag v0.1.0
 git push origin v0.1.0
 ```
+
+PyPI 公開を有効にするには、PyPI 側でこの GitHub リポジトリを trusted publisher として登録し、GitHub Actions の `pypi` environment と対応付けてください。
 
 ## ドキュメント
 

@@ -129,7 +129,7 @@ GitHub Actions now covers the main repository lifecycle:
 
 - `Repo Checks`: builds docs, compiles maintained Python sources, lints the maintained runtime files, builds the package, and verifies the packaged entrypoints
 - `Docs Pages`: builds the VitePress site and deploys it to GitHub Pages on pushes to `main`
-- `Release Package`: builds wheel and sdist artifacts on `v*` tags and attaches them to a GitHub Release with SHA256 checksums
+- `Release Package`: builds wheel and sdist artifacts on `v*` tags, attaches them to a GitHub Release with SHA256 checksums, and publishes them to PyPI
 
 If you want to cut a release:
 
@@ -139,6 +139,8 @@ git push origin v0.1.0
 ```
 
 That tag will trigger the package release workflow automatically.
+
+To make PyPI publishing work, configure a trusted publisher for this repository on PyPI and bind it to the `pypi` GitHub Actions environment.
 
 ## Documentation
 

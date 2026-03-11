@@ -38,6 +38,7 @@
 3. workflow artifact として保存
 4. GitHub Release を作成または更新
 5. 生成したファイルを Release に添付
+6. 同じ配布物を PyPI に公開
 
 例:
 
@@ -45,6 +46,17 @@
 git tag v0.1.0
 git push origin v0.1.0
 ```
+
+## PyPI の事前設定
+
+PyPI 公開には、リポジトリ外で一度だけ設定が必要です。
+
+1. PyPI 上で `matanyone2-runtime` を作成するか、使いたい配布名を確保する
+2. PyPI 側でこの GitHub リポジトリと workflow を trusted publisher として登録する
+3. `.github/workflows/release-package.yml` で使っている `pypi` environment と対応付ける
+4. tag release は `main` 系の公開フローに揃える
+
+現在の workflow は公式の `pypa/gh-action-pypi-publish` と OIDC を使うので、trusted publishing を設定すれば長期トークンを GitHub secrets に置かずに運用できます。
 
 ## push 前のローカル確認
 
