@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "matanyone2-runtime"
-version = "0.1.0"
+version = "0.1.3"
 description = "Shared Gradio and CLI runtime for MatAnyone and MatAnyone 2 on Windows."
 readme = "README.md"
 requires-python = ">=3.10"
