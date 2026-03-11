@@ -1,3 +1,78 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "matanyone2-runtime"
+version = "0.1.0"
+description = "Shared Gradio and CLI runtime for MatAnyone and MatAnyone 2 on Windows."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "LicenseRef-S-Lab-License-1.0"
+license-files = ["LICENSE"]
+authors = [
+  { name = "Sunwood AI Labs" },
+]
+dependencies = [
+  "progressbar2",
+  "gdown>=4.7.1",
+  "gitpython>=3.1",
+  "thinplate @ git+https://github.com/cheind/py-thin-plate-spline",
+  "hickle>=5.0",
+  "tensorboard>=2.11",
+  "numpy>=1.21",
+  "segment_anything @ git+https://github.com/facebookresearch/segment-anything.git",
+  "gradio==4.31.0",
+  "fastapi==0.111.0",
+  "pydantic==2.7.1",
+  "opencv-python>=4.8",
+  "matplotlib",
+  "pyyaml",
+  "av>=0.5.2",
+  "openmim",
+  "tqdm>=4.66.1",
+  "psutil",
+  "ffmpeg-python",
+  "cython",
+  "Pillow>=9.5",
+  "scipy>=1.7",
+  "pycocotools>=2.0.7",
+  "einops>=0.6",
+  "hydra-core>=1.3.2",
+  "PySide6>=6.2.0",
+  "charset-normalizer>=3.1.0",
+  "netifaces>=0.11.0",
+  "cchardet>=2.1.7",
+  "easydict",
+  "requests",
+  "pyqtdarktheme",
+  "imageio==2.25.0",
+  "imageio[ffmpeg]",
+  "safetensors",
+  "huggingface_hub<1.0",
+]
+
+[project.scripts]
+matanyone2-runtime = "matanyone2.runtime:main"
+matanyone-cli = "matanyone2.cli:main"
+matanyone-gradio = "matanyone2.gradio:main"
+
+[project.urls]
+Homepage = "https://github.com/Sunwood-ai-labs/MatAnyone2-Gradio-Windows"
+Documentation = "https://sunwood-ai-labs.github.io/MatAnyone2-Gradio-Windows/"
+Repository = "https://github.com/Sunwood-ai-labs/MatAnyone2-Gradio-Windows"
+Issues = "https://github.com/Sunwood-ai-labs/MatAnyone2-Gradio-Windows/issues"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["matanyone2*", "hugging_face*"]
+
+[tool.setuptools.package-data]
+matanyone2 = ["config/**/*.yaml"]
+hugging_face = ["assets/*.mp4", "test_sample/*.*"]
+
 [tool.ruff]
 target-version = "py310"
 line-length = 120

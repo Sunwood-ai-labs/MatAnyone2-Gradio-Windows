@@ -25,21 +25,34 @@ From the repository root:
 uv venv --python 3.10
 uv pip install --python .\.venv\Scripts\python.exe --upgrade pip setuptools wheel
 uv pip install --python .\.venv\Scripts\python.exe torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
-uv pip install --python .\.venv\Scripts\python.exe -r requirements.txt
+uv pip install --python .\.venv\Scripts\python.exe -e .
 ```
+
+Installed entrypoints:
+
+- `matanyone2-runtime`
+- `matanyone-gradio`
+- `matanyone-cli`
+- `python -m matanyone2`
+
+Recommended entrypoint:
+
+- `matanyone2-runtime webui ...` for the Gradio app
+- `matanyone2-runtime cli ...` for direct pipeline execution
+- `python -m matanyone2 webui ...` and `python -m matanyone2 cli ...` follow the same unified runtime
 
 ## Start the app
 
 GPU mode:
 
 ```powershell
-uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --device cuda --port 7860 --server_name 127.0.0.1
+uv run --python .\.venv\Scripts\python.exe matanyone2-runtime webui --device cuda --port 7860 --server_name 127.0.0.1
 ```
 
 CPU mode:
 
 ```powershell
-uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --device cpu --port 7860 --server_name 127.0.0.1
+uv run --python .\.venv\Scripts\python.exe matanyone2-runtime webui --device cpu --port 7860 --server_name 127.0.0.1
 ```
 
 Then open `http://127.0.0.1:7860`.
@@ -49,7 +62,7 @@ Then open `http://127.0.0.1:7860`.
 The Gradio app and the validation path now share the same runtime core in `matanyone2/demo_core.py`. For quick local checks, you can run the same pipeline without opening the web UI:
 
 ```powershell
-uv run --python .\.venv\Scripts\python.exe python -m matanyone2.cli --input .\media\bookcat.mp4 --device cpu --performance_profile fast --cpu_threads 8 --positive_point 280,180 --output_dir .\results
+uv run --python .\.venv\Scripts\python.exe matanyone2-runtime cli --input .\media\bookcat.mp4 --device cpu --performance_profile fast --cpu_threads 8 --positive_point 280,180 --output_dir .\results
 ```
 
 This creates a per-run folder such as `results/bookcat_1773163828_6577592/`.

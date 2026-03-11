@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: MatAnyone
-  text: Windows 向けマッティングドキュメント
-  tagline: ローカル Gradio デモ、モデル運用、今後の拡張に備えた日本語ドキュメントです。
+  text: Windows 向けローカルランタイム
+  tagline: CLI と Gradio WebUI を同じコアで動かし、再現しやすい検証と配布を支えるドキュメントです。
   image:
     src: /matanyone-hero.svg
     alt: MatAnyone hero
@@ -13,17 +13,20 @@ hero:
       text: セットアップ
       link: /ja/guide/getting-started
     - theme: alt
-      text: 構成を読む
+      text: アーキテクチャ
       link: /ja/guide/architecture
+    - theme: alt
+      text: CI/CD
+      link: /ja/guide/ci-cd
     - theme: alt
       text: English
       link: /
 
 features:
-  - title: ローカル実行に最適化
-    details: uv ベースのセットアップ、重みの自動取得、Windows 向けの実行導線をまとめています。
-  - title: 2 つのモデルを同じ UI で利用
-    details: MatAnyone と MatAnyone 2 を同じ Gradio UI から比較しながら使えます。
-  - title: 将来拡張しやすい構成
-    details: モデル管理、運用メモ、更新履歴などを増やしやすい docs 構造にしています。
+  - title: 共通ランタイム
+    details: CLI と WebUI はどちらも matanyone2/demo_core.py を通るので、検証経路を揃えやすくなっています。
+  - title: デバッグしやすい出力
+    details: 各 run はタイムスタンプ付きフォルダへ保存され、中間ファイルと metadata.json も一緒に残ります。
+  - title: 配布しやすい運用
+    details: GitHub Actions で docs build、package build、Pages 配信、release artifact 作成まで自動化しています。
 ---

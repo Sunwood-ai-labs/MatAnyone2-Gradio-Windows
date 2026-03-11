@@ -30,7 +30,7 @@ The app prefers `MatAnyone 2` as the default option when both model files exist.
 ## Useful runtime flags
 
 ```powershell
-uv run --python .\.venv\Scripts\python.exe python hugging_face\app.py --help
+uv run --python .\.venv\Scripts\python.exe matanyone2-runtime webui --help
 ```
 
 Common flags:
@@ -47,10 +47,12 @@ Common flags:
 You can validate the full `SAM -> MatAnyone -> save outputs` path without launching Gradio:
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\run_pipeline_check.py --input media\bookcat.mp4 --device cpu --performance_profile balanced --cpu_threads 8 --sam_model_type vit_h --frame_limit 241 --video_target_fps 0 --output_fps 12 --positive_point 280,180 --negative_point 30,30 --negative_point 530,30 --output_dir results\bookcat-profile-exp\balanced
+uv run --python .\.venv\Scripts\python.exe matanyone2-runtime cli --input media\bookcat.mp4 --device cpu --performance_profile balanced --cpu_threads 8 --sam_model_type vit_h --frame_limit 241 --video_target_fps 0 --output_fps 12 --positive_point 280,180 --negative_point 30,30 --negative_point 530,30 --output_dir results
 ```
 
-This script is what we used for the profile comparison documented in [`performance.md`](./performance.md). It writes mask previews, foreground outputs, alpha outputs, and timing-friendly artifacts under the chosen `--output_dir`.
+You can also use `matanyone-cli ...`, `python -m matanyone2 cli ...`, or the legacy `scripts/run_pipeline_check.py`. The unified `matanyone2-runtime` entrypoint is the recommended one.
+
+This workflow is what we used for the profile comparison documented in [`performance.md`](./performance.md). It writes mask previews, foreground outputs, alpha outputs, and timing-friendly artifacts under the chosen `--output_dir`.
 
 ## Shared runtime
 

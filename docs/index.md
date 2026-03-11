@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: MatAnyone
-  text: Windows-Friendly Matting Docs
-  tagline: Bilingual documentation for the local Gradio demo, model handling, and future expansion work.
+  text: Windows-Friendly Local Runtime
+  tagline: Shared CLI and Gradio docs for reproducible matting runs, package usage, and release automation.
   image:
     src: /matanyone-hero.svg
     alt: MatAnyone hero
@@ -16,14 +16,17 @@ hero:
       text: Read the Architecture
       link: /guide/architecture
     - theme: alt
+      text: CI/CD
+      link: /guide/ci-cd
+    - theme: alt
       text: 日本語
       link: /ja/
 
 features:
-  - title: Local-first workflow
-    details: Run the MatAnyone demo with uv, auto-downloaded checkpoints, and a Windows-friendly setup flow.
-  - title: Two models, one interface
-    details: Compare MatAnyone and MatAnyone 2 from the same Gradio app without changing repositories.
-  - title: Ready to grow
-    details: These docs are structured for future pages on model management, pipelines, tooling, and release notes.
+  - title: Shared runtime core
+    details: The CLI and WebUI both execute through the same orchestration path in matanyone2/demo_core.py.
+  - title: Debuggable outputs
+    details: Every run creates a timestamped folder with final outputs, SAM previews, masks, snapshots, and metadata.json.
+  - title: Release-ready repository
+    details: GitHub Actions now verifies the package, builds docs, deploys Pages, and publishes release artifacts on version tags.
 ---

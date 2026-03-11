@@ -5,7 +5,7 @@ const repo = "https://github.com/Sunwood-ai-labs/MatAnyone2-Gradio-Windows";
 
 export default defineConfig({
   title: "MatAnyone",
-  description: "Windows-friendly docs for the MatAnyone and MatAnyone 2 Gradio demo.",
+  description: "Windows-friendly docs for the MatAnyone and MatAnyone 2 local runtime.",
   base: "/MatAnyone2-Gradio-Windows/",
   cleanUrls: true,
   vite: {
@@ -25,6 +25,7 @@ export default defineConfig({
         nav: [
           { text: "Guide", link: "/guide/getting-started" },
           { text: "Architecture", link: "/guide/architecture" },
+          { text: "CI/CD", link: "/guide/ci-cd" },
           { text: "GitHub", link: repo },
           { text: "日本語", link: "/ja/" },
         ],
@@ -36,6 +37,7 @@ export default defineConfig({
               { text: "Usage", link: "/guide/usage" },
               { text: "Performance", link: "/guide/performance" },
               { text: "Architecture", link: "/guide/architecture" },
+              { text: "CI/CD", link: "/guide/ci-cd" },
               { text: "Troubleshooting", link: "/guide/troubleshooting" },
             ],
           },
@@ -49,7 +51,8 @@ export default defineConfig({
       themeConfig: {
         nav: [
           { text: "ガイド", link: "/ja/guide/getting-started" },
-          { text: "構成", link: "/ja/guide/architecture" },
+          { text: "アーキテクチャ", link: "/ja/guide/architecture" },
+          { text: "CI/CD", link: "/ja/guide/ci-cd" },
           { text: "GitHub", link: repo },
           { text: "English", link: "/" },
         ],
@@ -61,7 +64,8 @@ export default defineConfig({
               { text: "使い方", link: "/ja/guide/usage" },
               { text: "パフォーマンス", link: "/ja/guide/performance" },
               { text: "アーキテクチャ", link: "/ja/guide/architecture" },
-              { text: "トラブルシュート", link: "/ja/guide/troubleshooting" },
+              { text: "CI/CD", link: "/ja/guide/ci-cd" },
+              { text: "トラブルシューティング", link: "/ja/guide/troubleshooting" },
             ],
           },
         ],

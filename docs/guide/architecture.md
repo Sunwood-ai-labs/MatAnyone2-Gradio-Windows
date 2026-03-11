@@ -14,13 +14,14 @@ Diagram source files:
 - `hugging_face/tools/`: click prompting, mask painting, download helpers, UI support code
 - `matanyone2/demo_core.py`: shared runtime for Gradio and CLI, including ffmpeg setup, media loading, SAM integration, matting orchestration, output writing, and debug artifact export
 - `matanyone2/cli.py`: direct CLI entrypoint for validation and reproducible runs
+- `matanyone2/gradio.py`: package-friendly Gradio launcher used by the `matanyone-gradio` console script
 - `matanyone2/`: upstream model and inference implementation
 - `pretrained_models/`: downloaded checkpoints
 - `results/`: generated output artifacts
 
 ## Runtime flow
 
-1. `hugging_face/app.py` or `matanyone2/cli.py` parses runtime flags and forwards execution into `matanyone2/demo_core.py`.
+1. `matanyone-gradio`, `matanyone-cli`, `matanyone2-runtime`, `python -m matanyone2 <cli|webui>`, or the legacy wrapper script parse runtime flags and forward execution into `matanyone2/demo_core.py`.
 2. ffmpeg and required checkpoints are resolved and downloaded into `pretrained_models/` if missing.
 3. Media is loaded into a shared session state with source size, working size, frame count, FPS, and optional audio metadata.
 4. SAM prompt points are converted into a template mask on the selected frame.
@@ -47,4 +48,10 @@ This repository is expected to grow beyond a single README. The `docs/` site giv
 
 ## Deployment
 
-The docs are built with VitePress and deployed by GitHub Actions through the `Docs Pages` workflow.
+The repository now has a simple split between validation, documentation publishing, and release packaging:
+
+- `Repo Checks` validates docs, maintained Python files, and package entrypoints
+- `Docs Pages` publishes the VitePress site
+- `Release Package` builds wheel and sdist artifacts for tagged releases
+
+That gives us one workflow for day-to-day safety and separate workflows for published outputs.
