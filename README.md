@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="media/matanyone-hero.svg" alt="MatAnyone hero banner" width="100%" />
+  <img src="https://sunwood-ai-labs.github.io/MatAnyone2-Gradio-Windows/matanyone-hero.svg" alt="MatAnyone hero banner" width="100%" />
 </p>
 
 # MatAnyone

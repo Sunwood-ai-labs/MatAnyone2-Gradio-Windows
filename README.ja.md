@@ -1,7 +1,7 @@
 # MatAnyone
 
 <p align="center">
-  <img src="media/matanyone-hero.svg" alt="MatAnyone hero banner" width="100%" />
+  <img src="https://sunwood-ai-labs.github.io/MatAnyone2-Gradio-Windows/matanyone-hero.svg" alt="MatAnyone hero banner" width="100%" />
 </p>
 
 `MatAnyone` / `MatAnyone 2` をローカルで扱いやすくした Windows 向けランタイムです。Gradio WebUI と CLI が `matanyone2/demo_core.py` の共通コアを使うので、UI 検証と CLI 検証の結果を揃えやすくしています。
