@@ -41,7 +41,12 @@ def parse_args():
     parser.add_argument("--cpu_threads", type=int, default=None)
     parser.add_argument("--frame_limit", type=int, default=None, help="Optional cap for loaded frames.")
     parser.add_argument("--video_target_fps", type=float, default=None, help="Optional override for video sampling FPS. Use 0 to keep all frames.")
-    parser.add_argument("--output_fps", type=float, default=12.0, help="FPS used when writing video outputs.")
+    parser.add_argument(
+        "--output_fps",
+        type=float,
+        default=None,
+        help="Optional FPS override for video outputs. Defaults to the processing FPS of the loaded media.",
+    )
     parser.add_argument("--select_frame", type=int, default=0, help="Frame index used to place the click prompt.")
     parser.add_argument("--end_frame", type=int, default=None, help="Optional exclusive end frame for processing.")
     parser.add_argument("--output_dir", default=os.path.join(REPO_DIR, "results", "cli"))
@@ -156,7 +161,7 @@ def main():
         end_frame=args.end_frame,
     )
 
-    fps = args.output_fps if is_video else 12
+    fps = args.output_fps if args.output_fps and args.output_fps > 0 else media_state.get("fps", 12)
     run_output_dir = create_run_output_dir(args.output_dir, media_state)
     save_cli_outputs(
         run_output_dir,

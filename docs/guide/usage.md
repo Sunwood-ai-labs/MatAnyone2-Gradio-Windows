@@ -54,6 +54,8 @@ You can also use `matanyone-cli ...`, `python -m matanyone2 cli ...`, or the leg
 
 This workflow is what we used for the profile comparison documented in [`performance.md`](./performance.md). It writes mask previews, foreground outputs, alpha outputs, and timing-friendly artifacts under the chosen `--output_dir`.
 
+If you do not pass `--output_fps`, the CLI preserves the loaded processing FPS so the output video duration matches the processed frame sequence. Set `--output_fps` only when you explicitly want a different playback rate.
+
 ## Shared runtime
 
 The Gradio app and the CLI both run through the same shared runtime in `matanyone2/demo_core.py`. That means:

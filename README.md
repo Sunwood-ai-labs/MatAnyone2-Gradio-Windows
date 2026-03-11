@@ -123,6 +123,8 @@ uv run --python .\.venv\Scripts\python.exe matanyone2-runtime cli --input .\medi
 
 This workflow is also useful for CI smoke checks, scripted regression checks, and local benchmarking.
 
+By default, the CLI now writes video outputs at the loaded media's processing FPS so playback duration stays aligned with the processed frames. Use `--output_fps` only when you intentionally want to override that for benchmarking or comparison runs.
+
 ## CI/CD
 
 GitHub Actions now covers the main repository lifecycle:
